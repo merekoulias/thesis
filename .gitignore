@@ -1,0 +1,9 @@
+.venv
+*.png
+*.csv
+*.parquet
+*.~lock
+*.zip
+*.tar.gz
+*.pyc
+*.txt
