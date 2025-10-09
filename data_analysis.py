@@ -28,8 +28,8 @@ def load_and_preview_data():
         print("First 5 rows of training data:")
         head_df = train_data.head()
         print(head_df)
-        print("Saving file's head to data_analysis/application_train_head.csv")
-        head_df.to_csv('data_analysis/application_train_head.csv', index=False)
+        print("Saving file's head to exploratory_data_analysis/application_train_head.csv")
+        head_df.to_csv('exploratory_data_analysis/application_train_head.csv', index=False)
         print(80*'=')
     
     except FileNotFoundError:
@@ -70,8 +70,8 @@ def load_and_preview_data():
     target_hist = train_data['TARGET'].astype(int).plot.hist()
     target_hist.set_xlabel("TARGET")
     target_hist.set_ylabel("Number of Applicants")
-    print("Saving histogram to data_analysis/target_histogram.png")
-    plt.savefig('data_analysis/target_histogram.png', bbox_inches='tight', dpi=300)
+    print("Saving histogram to exploratory_data_analysis/target_histogram.png")
+    plt.savefig('exploratory_data_analysis/target_histogram.png', bbox_inches='tight', dpi=300)
     plt.show()
     print(80*'=')
 
@@ -102,8 +102,8 @@ def missing_values(df):
         print(80*'=')
 
         # Save the missing values table to a CSV file
-        print("Saving missing values table to 'data_analysis/missing_values_table.csv'")
-        mis_val_table_ren_columns.to_csv('data_analysis/missing_values_table.csv')
+        print("Saving missing values table to 'exploratory_data_analysis/missing_values_table.csv'")
+        mis_val_table_ren_columns.to_csv('exploratory_data_analysis/missing_values_table.csv')
 
         print("First 20 rows of missing values table:")
         print(mis_val_table_ren_columns.head(20))
@@ -190,15 +190,15 @@ def description_analysis(train_data):
     print("First 5 rows of data description analysis (numeric columns):")
     print(desc_df.head())
     print(80*'=')
-    print("Saving data description analysis to 'data_analysis/application_train_desc.csv'")
-    desc_df.to_csv('data_analysis/application_train_desc.csv')
+    print("Saving data description analysis to 'exploratory_data_analysis/application_train_desc.csv'")
+    desc_df.to_csv('exploratory_data_analysis/application_train_desc.csv')
     print(80*'=')
 
     # Prepare analysis file and header
-    analysis_file = 'data_analysis/desc_analysis.csv'
+    analysis_file = 'exploratory_data_analysis/desc_analysis.csv'
     cols = ['statistic'] + list(desc_df.columns)
-    if not os.path.exists('data_analysis'):
-        os.makedirs('data_analysis')
+    if not os.path.exists('exploratory_data_analysis'):
+        os.makedirs('exploratory_data_analysis')
     if not os.path.exists(analysis_file):
         pd.DataFrame(columns=cols).to_csv(analysis_file, index=False)
 
@@ -315,6 +315,44 @@ def description_analysis(train_data):
 
     return desc_df
 
+def anomalies_handling(train_data, test_data):
+    """
+    From data's description i found anomaly in DAYS_EMPLOYED column
+    """
+
+    # Display statistics for DAYS_EMPLOYED
+    print(train_data['DAYS_EMPLOYED'].describe())
+    print("The maximum value (besides being positive) is about 1000 years")
+    # Plotting columns histogram
+    train_data['DAYS_EMPLOYED'].plot.hist(title = 'Days Employment Histogram')
+    plt.xlabel('Days Employment')
+
+    #  Subset the anomalous clients
+    anom = train_data[train_data['DAYS_EMPLOYED'] == 365243]
+    non_anom = train_data[train_data['DAYS_EMPLOYED'] != 365243]
+    print('The non-anomalies default on %0.2f%% of loans' % (100 * non_anom['TARGET'].mean()))
+    print('The anomalies default on %0.2f%% of loans' % (100 * anom['TARGET'].mean()))
+    print('There are %d anomalous days of employment' % len(anom))
+    print("The anomalies have a lower rate of default.")
+
+    # Create an anomalous flag column
+    train_data['DAYS_EMPLOYED_ANOM'] = train_data["DAYS_EMPLOYED"] == 365243
+
+    # Replace the anomalous values with nan
+    train_data['DAYS_EMPLOYED'].replace({365243: np.nan}, inplace = True)
+
+    train_data['DAYS_EMPLOYED'].plot.hist(title = 'Days Employment Histogram')
+    plt.xlabel('Days Employment')
+    plt.show()
+
+    # Fill in the existing column with np.nan in the testing data
+    test_data['DAYS_EMPLOYED_ANOM'] = test_data["DAYS_EMPLOYED"] == 365243
+    test_data["DAYS_EMPLOYED"].replace({365243: np.nan}, inplace = True)
+
+    print('There are %d anomalies in the test data out of %d entries' % (test_data["DAYS_EMPLOYED_ANOM"].sum(), len(test_data)))
+
+    return 
+
 def data_correlations(train_data, desc_df):
     """
     Interpretations of the absolute value of the correlation coefficent are:
@@ -336,7 +374,7 @@ def data_correlations(train_data, desc_df):
     corr_pairs = corr_matrix.where(upper_tri).stack().sort_values()
 
     # Save full correlation matrix as CSV
-    # corr_matrix.to_csv(os.path.join("data_analysis", "full_correlation_matrix.csv"))
+    # corr_matrix.to_csv(os.path.join("exploratory_data_analysis", "full_correlation_matrix.csv"))
 
     # Store all pairwise correlations to CSV
     pairs_df = corr_pairs.reset_index()
@@ -346,12 +384,12 @@ def data_correlations(train_data, desc_df):
     threshold = 0.60
     high_pairs = pairs_df[pairs_df['correlation'] > threshold].copy()
     high_pairs = high_pairs.sort_values(by='correlation', key=lambda s: s.abs(), ascending=False)
-    high_pairs.to_csv(os.path.join('data_analysis', 'most_positive_correlation_pairs.csv'), index=False)
+    high_pairs.to_csv(os.path.join('exploratory_data_analysis', 'most_positive_correlation_pairs.csv'), index=False)
 
     # Find most negative correlation pairs (correlation < -0.60)
     low_pairs = pairs_df[pairs_df['correlation'] < -threshold].copy()
     low_pairs = low_pairs.sort_values(by='correlation', key=lambda s: s.abs(), ascending=False)
-    low_pairs.to_csv(os.path.join('data_analysis', 'most_negative_correlation_pairs.csv'), index=False)
+    low_pairs.to_csv(os.path.join('exploratory_data_analysis', 'most_negative_correlation_pairs.csv'), index=False)
 
     # Display summary
     print(80*'=')
@@ -365,8 +403,8 @@ def data_correlations(train_data, desc_df):
 
     # Save full correlation matrix as CSV
     print(80*'=')
-    print("Saving correlation to TARGET matrix to 'data_analysis")
-    target_corr.to_csv(os.path.join("data_analysis", "target_correlation_matrix.csv"))
+    print("Saving correlation to TARGET matrix to 'exploratory_data_analysis")
+    target_corr.to_csv(os.path.join("exploratory_data_analysis", "target_correlation_matrix.csv"))
     print(80*'=')
     
     # Display correlations to target
@@ -396,7 +434,7 @@ def data_correlations(train_data, desc_df):
         correlation_between_stats = selected.T.corr()
 
     # Save statistics correlation csv
-    correlation_between_stats.to_csv(os.path.join("data_analysis", "statistics_correlation_matrix.csv"))
+    correlation_between_stats.to_csv(os.path.join("exploratory_data_analysis", "statistics_correlation_matrix.csv"))
     # Create heatmap
     plt.figure(figsize=(12, 10))
     sns.heatmap(correlation_between_stats, 
@@ -411,11 +449,101 @@ def data_correlations(train_data, desc_df):
     plt.yticks(rotation=0)
 
     # Save the plot
-    output_path = f'data_analysis/statistics_correlation_heatmap.png'
+    output_path = f'exploratory_data_analysis/statistics_correlation_heatmap.png'
     plt.savefig(output_path, bbox_inches='tight', dpi=300)
     plt.show()
     
     return 
+
+def corr_exam(train_data):
+    """
+    Examing the variables with the with the strongest 
+    possitve correlation (DAYS_BIRTH) 
+    and negative correlations (EXT_SOURCE_1, EXT_SOURCE_2, and EXT_SOURCE_3)
+    with the TARGET
+    """
+
+    # Find the correlation of the positive days since birth and target
+    train_data['DAYS_BIRTH'] = abs(train_data['DAYS_BIRTH'])
+    print(train_data['DAYS_BIRTH'].corr(train_data['TARGET']))
+
+    # Set the style of plots
+    plt.style.use('fivethirtyeight')
+
+    # Plot the distribution of ages in years
+    plt.hist(train_data['DAYS_BIRTH'] / 365, edgecolor = 'k', bins = 25)
+    plt.title('Age of Client'); plt.xlabel('Age (years)'); plt.ylabel('Count')
+    plt.savefig('exploratory_data_analysis/age_distribution.png', bbox_inches='tight', dpi=300)
+    plt.show()
+
+    # Visualize the effect of the age on the target
+    plt.figure(figsize = (10, 8))
+
+    # KDE plot of loans that were repaid on time
+    sns.kdeplot(train_data.loc[train_data['TARGET'] == 0, 'DAYS_BIRTH'] / 365, label = 'target == 0')
+
+    # KDE plot of loans which were not repaid on time
+    sns.kdeplot(train_data.loc[train_data['TARGET'] == 1, 'DAYS_BIRTH'] / 365, label = 'target == 1')
+    plt.xlabel('Age (years)'); plt.ylabel('Density'); plt.title('Distribution of Ages')
+    plt.savefig('exploratory_data_analysis/age_distribution_by_target.png', bbox_inches='tight', dpi=300)
+    plt.show()
+    
+    # Age information into a separate dataframe
+    age_data = train_data[['TARGET', 'DAYS_BIRTH']]
+    age_data['YEARS_BIRTH'] = age_data['DAYS_BIRTH'] / 365
+
+    # Bin the age data
+    age_data['YEARS_BINNED'] = pd.cut(age_data['YEARS_BIRTH'], bins = np.linspace(20, 70, num = 11))
+
+    # Group by the bin and calculate averages
+    age_groups  = age_data.groupby('YEARS_BINNED').mean()
+
+    # Plot average failure to repay loans by age bracket
+    plt.figure(figsize = (8, 8))
+
+    # Graph the age bins and the average of the target as a bar plot
+    plt.bar(age_groups.index.astype(str), 100 * age_groups['TARGET'])
+
+    # Plot labeling
+    plt.xticks(rotation = 75); plt.xlabel('Age Group (years)'); plt.ylabel('Failure to Repay (%)')
+    plt.title('Failure to Repay by Age Group')
+
+    # Extract the EXT_SOURCE variables and show correlations
+    ext_data = train_data[['TARGET', 'EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH']]
+    ext_data_corrs = ext_data.corr()
+
+    # Display the correlations of the EXT_SOURCE features with the target and with each other
+    plt.figure(figsize = (8, 6))
+
+    # Heatmap of correlations
+    sns.heatmap(ext_data_corrs, cmap = plt.cm.RdYlBu_r, vmin = -0.25, annot = True, vmax = 0.6)
+    plt.title('Correlation Heatmap')
+    plt.savefig('exploratory_data_analysis/ext_source_correlation_heatmap.png', bbox_inches='tight', dpi=300)  
+    plt.show()
+    
+    # Display the distribution of each of these features colored by the value of the target
+    plt.figure(figsize = (10, 12))
+
+    # iterate through the sources
+    for i, source in enumerate(['EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3']):
+        
+        # create a new subplot for each source
+        plt.subplot(3, 1, i + 1)
+        # plot repaid loans
+        sns.kdeplot(train_data.loc[train_data['TARGET'] == 0, source], label = 'target == 0')
+        # plot loans that were not repaid
+        sns.kdeplot(train_data.loc[train_data['TARGET'] == 1, source], label = 'target == 1')
+        
+        # Label the plots
+        plt.title('Distribution of %s by Target Value' % source)
+        plt.xlabel('%s' % source); plt.ylabel('Density');
+        
+    plt.tight_layout(h_pad = 2.5)
+    plt.savefig('exploratory_data_analysis/ext_source_distribution_by_target.png', bbox_inches='tight', dpi=300)
+    plt.show()
+
+    return 
+
 
 def main():
     # List files available
@@ -435,9 +563,14 @@ def main():
     print("============================DATA DESCRIPTION AND ANALYSIS=============================")
     desc_df = description_analysis(train_data)
 
+    print("=====================================HANDLING ANOMALIES======================================")
+    anomalies_handling(train_data_en, test_data_en)
+
     print("=====================================CORRELATIONS======================================")
     data_correlations(train_data_en, desc_df)
 
+    print("=====================================EXAMING CORRELATIONS======================================")
+    corr_exam(train_data_en)
 
 if __name__ == "__main__":
     main()
