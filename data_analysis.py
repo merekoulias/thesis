@@ -395,6 +395,8 @@ def data_correlations(train_data, desc_df):
         selected = stats_df.loc[existing]
         correlation_between_stats = selected.T.corr()
 
+    # Save statistics correlation csv
+    correlation_between_stats.to_csv(os.path.join("data_analysis", "statistics_correlation_matrix.csv"))
     # Create heatmap
     plt.figure(figsize=(12, 10))
     sns.heatmap(correlation_between_stats, 
