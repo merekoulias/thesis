@@ -16,6 +16,13 @@ warnings.filterwarnings('ignore')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+# plotly offline iplot for interactive plots
+from plotly.offline import iplot
+
+# Matplotlib ticker for better axis formatting
+import matplotlib.ticker as mtick
+
+
 def load_and_preview_data():
     # Training data
     try:
@@ -57,26 +64,219 @@ def load_and_preview_data():
     print("Number of unique entries (classes) in each of the categorial (object) columns:")
     print(train_data.select_dtypes('object').apply(pd.Series.nunique, axis = 0))
 
+    # Target distribution
     print("================EXAMINING THE DISTRIBUTION OF THE TARGET COLUMN================")
     print(train_data['TARGET'].value_counts())
     print(80*'=')
 
-    # Examining the distribution of the protected attribute
-    print("================EXAMINING THE DISTRIBUTION OF THE GENDER COLUMN================")
-    print(train_data['CODE_GENDER'].value_counts())
-    print(80*'=')
-
+    # Target distribution plot
     print("Plotting TARGET histogram to see class distribution")
     target_hist = train_data['TARGET'].astype(int).plot.hist()
     target_hist.set_xlabel("TARGET")
     target_hist.set_ylabel("Number of Applicants")
     print("Saving histogram to exploratory_data_analysis/target_histogram.png")
     plt.savefig('exploratory_data_analysis/target_histogram.png', bbox_inches='tight', dpi=300)
-    plt.show()
+    plt.close()
+    print(80*'=')
+
+    # Gender distribution
+    print("================EXAMINING THE DISTRIBUTION OF THE GENDER COLUMN================")
+    print(train_data['CODE_GENDER'].value_counts())
+    print(80*'=')
+
+    # NAME_EDUCATION_TYPE donut chart
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S EDUCATION LEVEL (NAME_EDUCATION_TYPE COLUMN)================")
+    name_education_type = train_data["NAME_EDUCATION_TYPE"].value_counts()
+    plt.figure(figsize=(6,6))
+    wedges, texts, autotexts = plt.pie(name_education_type.values, 
+            labels=name_education_type.index, 
+            startangle=90, 
+            counterclock=False,
+            wedgeprops=dict(width=0.4, edgecolor='w'),
+            autopct='%1.1f%%',           
+            pctdistance=0.75)
+    plt.title('Types of Education')
+    plt.legend(wedges, name_education_type.index, title='Education Level',
+           loc='center left', bbox_to_anchor=(1.0, 0.5))
+    plt.close()
+    plt.savefig('exploratory_data_analysis/education_level_donut.png', bbox_inches='tight', dpi=300)
+    print(f"Saved static donut to 'exploratory_data_analysis/education_level_donut.png'")
+    print(80*'=')
+
+    # NAME_EDUCATION_TYPE distribution plot grouped by TARGET
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S EDUCATION LEVEL (NAME_EDUCATION_TYPE COLUMN) GROUPED BY TARGET================")
+    plt.figure(figsize=(12,5))
+    sns.countplot(data=train_data, x='NAME_EDUCATION_TYPE', hue='TARGET')
+    plt.title("Distribution of Education Level by Target")
+    plt.savefig('exploratory_data_analysis/education_level_by_target.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
+
+    # AMT_CREDIT distribution plot
+    print("================EXAMINING THE DISTRIBUTION OF THE AMT_CREDIT COLUMN================")
+    plt.figure(figsize=(12,5))
+    plt.title("Distribution of AMT_CREDIT")
+    sns.distplot(train_data["AMT_CREDIT"])
+    plt.savefig('exploratory_data_analysis/amt_credit_distribution.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
+
+    # AMT_TOTAL_INCOME distribution plot
+    print("================EXAMINING THE DISTRIBUTION OF THE AMT_TOTAL_INCOME COLUMN================")
+    plt.figure(figsize=(12,5))
+    plt.title("Distribution of AMT_INCOME_TOTAL")
+    sns.distplot(train_data["AMT_INCOME_TOTAL"].dropna())
+    plt.savefig('exploratory_data_analysis/amt_total_income_distribution.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
+
+    # AMT_GOODS_PRICE distribution plot
+    print("================EXAMINING THE DISTRIBUTION OF THE AMT_GOODS_PRICE COLUMN================")
+    plt.figure(figsize=(12,5))
+    plt.title("Distribution of AMT_GOODS_PRICE")
+    sns.distplot(train_data["AMT_GOODS_PRICE"].dropna())
+    plt.savefig('exploratory_data_analysis/amt_goods_price_distribution.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
+
+    # NAME_CONTRACT_TYPE donut chart
+    print("================EXAMINING THE DISTRIBUTION OF LOAN TYPE (NAME_CONTRACT_TYPE COLUMN)================")
+    name_contract_type = train_data["NAME_CONTRACT_TYPE"].value_counts()
+    plt.figure(figsize=(6,6))
+    wedges, texts, autotexts = plt.pie(name_contract_type.values, 
+            labels=name_contract_type.index, 
+            startangle=90, 
+            counterclock=False,
+            wedgeprops=dict(width=0.4, edgecolor='w'),
+            autopct='%1.1f%%',           
+            pctdistance=0.75)
+    plt.title('Types of loan')
+    plt.legend(wedges, name_contract_type.index, title='Loan Type',
+           loc='center left', bbox_to_anchor=(1.0, 0.5))
+    plt.close()
+    plt.savefig('exploratory_data_analysis/loan_type_donut.png', bbox_inches='tight', dpi=300)
+    print(f"Saved static donut to 'exploratory_data_analysis/loan_type_donut.png'")
+    print(80*'=')
+
+    # NAME_INCOME_TYPE donut chart
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S INCOME SOURCE (NAME_INCOME_TYPE COLUMN)================")
+    name_income_type = train_data["NAME_INCOME_TYPE"].value_counts()
+    plt.figure(figsize=(6,6))
+    wedges, texts, autotexts = plt.pie(name_income_type.values, 
+            labels=name_income_type.index, 
+            startangle=90, 
+            counterclock=False,
+            wedgeprops=dict(width=0.4, edgecolor='w'),
+            autopct='%1.1f%%',           
+            pctdistance=0.75)
+    plt.title('Applicant\'s Income Source')
+    plt.legend(wedges, name_income_type.index, title='Income Source',
+           loc='center left', bbox_to_anchor=(1.0, 0.5))
+    plt.close()
+    plt.savefig('exploratory_data_analysis/income_source_donut.png', bbox_inches='tight', dpi=300)
+    print(f"Saved static donut to 'exploratory_data_analysis/income_source_donut.png'")
+    print(80*'=')
+    
+    # NAME_INCOME_TYPE distribution grouped by TARGET
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S INCOME SOURCE (NAME_INCOME_TYPE COLUMN) GROUPED BY TARGET================")
+    plt.figure(figsize=(12, 6))
+    sns.countplot(data=train_data, x="NAME_INCOME_TYPE", hue="TARGET")
+    plt.title("Distribution of Applicant's Income Source by Target")
+    plt.xlabel("Income Source")
+    plt.ylabel("Count")
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig('exploratory_data_analysis/income_source_by_target.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
+
+    # OCCUPATION_TYPE distribution plot
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S OCCUPATION (OCCUPATION_TYPE COLUMN)================")
+    # counts-only bar chart (dropna by default)
+    occupation_type = train_data["OCCUPATION_TYPE"].value_counts()
+    plt.figure(figsize=(10, 6))
+    bars = plt.bar(occupation_type.index, occupation_type.values, color='green', edgecolor='k')
+    plt.title("Occupation of Applicants who applied for loan")
+    plt.xlabel("Occupation")
+    plt.ylabel("Count")
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+
+    # annotate counts above bars
+    for b in bars:
+        h = b.get_height()
+        plt.text(b.get_x() + b.get_width() / 2, h + max(1, occupation_type.values.max()*0.01), f'{int(h)}',
+                ha='center', va='bottom', fontsize=9)
+
+    plt.savefig('exploratory_data_analysis/occupation_type_bar_chart.png', dpi=300, bbox_inches='tight')
+    print(f"Saved static bar chart to 'exploratory_data_analysis/occupation_type_bar_chart.png'")
+    plt.close()
+
+    # OCCUPATION_TYPE distribution plot grouped by TARGET
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S OCCUPATION (OCCUPATION_TYPE COLUMN) GROUPED BY TARGET================")
+    plt.figure(figsize=(12, 6))
+    sns.countplot(data=train_data, x="OCCUPATION_TYPE", hue="TARGET")
+    plt.title("Distribution of Applicant's Occupation by Target")
+    plt.xlabel("Occupation")
+    plt.ylabel("Count")
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig('exploratory_data_analysis/occupation_type_by_target.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
+
+    # ORGANIZATION_TYPE distribution plot
+    print("================EXAMINING THE DISTRIBUTION OF THE ORGANIZATION THE APPLICANT'S WORKS (ORGANIZATION_TYPE COLUMN)================")
+    organization_type = train_data["ORGANIZATION_TYPE"].value_counts(dropna=False)
+    total = int(organization_type.sum())
+
+    labels = organization_type.index.astype(str)
+    counts = organization_type.values
+
+    fig, ax = plt.subplots(figsize=(12, 10))
+    y_pos = np.arange(len(labels))
+
+    # horizontal bars (easier to read long labels)
+    bars = ax.barh(y_pos, counts, color='green', edgecolor='k', height=0.5)
+
+    # invert so largest is on top
+    ax.invert_yaxis()
+
+    # label formatting
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, fontsize=9)
+    ax.set_xlabel('Count', fontsize=12)
+    ax.set_title("Organization of Applicants who applied for loan", fontsize=14)
+
+    # thousands separator on x-axis
+    ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, p: format(int(x), ',')))
+
+    # annotate counts and percentages just outside the bars
+    max_count = counts.max() if len(counts) else 1
+    pad = max_count * 0.01
+    for i, v in enumerate(counts):
+        pct = v / total * 100.0 if total else 0.0
+        ax.text(v + pad, i, f'{v:,}  ({pct:.1f}%)', va='center', fontsize=8)
+
+    plt.tight_layout()
+    plt.savefig('exploratory_data_analysis/organization_type_bar_chart.png', dpi=300, bbox_inches='tight')
+    print(f"Saved static bar chart to 'exploratory_data_analysis/organization_type_bar_chart.png'")
+    plt.close()
+
+    # ORGANIZATION_TYPE distribution plot grouped by TARGET
+    print("================EXAMINING THE DISTRIBUTION OF THE ORGANIZATION THE APPLICANT'S WORKS (ORGANIZATION_TYPE COLUMN) GROUPED BY TARGET================")
+    plt.figure(figsize=(12, 6))
+    sns.countplot(data=train_data, x="ORGANIZATION_TYPE", hue="TARGET")
+    plt.title("Distribution of Organization Type by Target")
+    plt.xlabel("Organization Type")
+    plt.ylabel("Count")
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig('exploratory_data_analysis/organization_type_by_target.png', bbox_inches='tight', dpi=300)
+    plt.close()
     print(80*'=')
 
     return train_data, test_data
-
 
 def missing_values(df):
         # Total missing values
@@ -343,7 +543,7 @@ def anomalies_handling(train_data, test_data):
 
     train_data['DAYS_EMPLOYED'].plot.hist(title = 'Days Employment Histogram')
     plt.xlabel('Days Employment')
-    plt.show()
+    plt.close()
 
     # Fill in the existing column with np.nan in the testing data
     test_data['DAYS_EMPLOYED_ANOM'] = test_data["DAYS_EMPLOYED"] == 365243
@@ -451,7 +651,7 @@ def data_correlations(train_data, desc_df):
     # Save the plot
     output_path = f'exploratory_data_analysis/statistics_correlation_heatmap.png'
     plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.show()
+    plt.close()
     
     return 
 
@@ -464,49 +664,35 @@ def corr_exam(train_data):
     """
 
     # Find the correlation of the positive days since birth and target
-    train_data['DAYS_BIRTH'] = abs(train_data['DAYS_BIRTH'])
+    train_data['DAYS_BIRTH'] = train_data['DAYS_BIRTH'].abs()
     print(train_data['DAYS_BIRTH'].corr(train_data['TARGET']))
 
     # Set the style of plots
     plt.style.use('fivethirtyeight')
 
     # Plot the distribution of ages in years
-    plt.hist(train_data['DAYS_BIRTH'] / 365, edgecolor = 'k', bins = 25)
+    plt.figure(figsize=(8, 5))
+    plt.hist(train_data['DAYS_BIRTH'] / 365, edgecolor='k', bins=25)
     plt.title('Age of Client'); plt.xlabel('Age (years)'); plt.ylabel('Count')
     plt.savefig('exploratory_data_analysis/age_distribution.png', bbox_inches='tight', dpi=300)
-    plt.show()
+    plt.close()
 
-    # Visualize the effect of the age on the target
-    plt.figure(figsize = (10, 8))
-
-    # KDE plot of loans that were repaid on time
-    sns.kdeplot(train_data.loc[train_data['TARGET'] == 0, 'DAYS_BIRTH'] / 365, label = 'target == 0')
-
-    # KDE plot of loans which were not repaid on time
-    sns.kdeplot(train_data.loc[train_data['TARGET'] == 1, 'DAYS_BIRTH'] / 365, label = 'target == 1')
-    plt.xlabel('Age (years)'); plt.ylabel('Density'); plt.title('Distribution of Ages')
-    plt.savefig('exploratory_data_analysis/age_distribution_by_target.png', bbox_inches='tight', dpi=300)
-    plt.show()
-    
-    # Age information into a separate dataframe
-    age_data = train_data[['TARGET', 'DAYS_BIRTH']]
+    # Prepare age dataframe once, create YEARS_BINNED, then group
+    age_data = train_data[['TARGET', 'DAYS_BIRTH']].copy()
     age_data['YEARS_BIRTH'] = age_data['DAYS_BIRTH'] / 365
-
-    # Bin the age data
-    age_data['YEARS_BINNED'] = pd.cut(age_data['YEARS_BIRTH'], bins = np.linspace(20, 70, num = 11))
+    age_data['YEARS_BINNED'] = pd.cut(age_data['YEARS_BIRTH'], bins=np.linspace(20, 70, num=11))
 
     # Group by the bin and calculate averages
-    age_groups  = age_data.groupby('YEARS_BINNED').mean()
+    age_groups = age_data.groupby('YEARS_BINNED').mean()
 
     # Plot average failure to repay loans by age bracket
-    plt.figure(figsize = (8, 8))
-
-    # Graph the age bins and the average of the target as a bar plot
+    plt.figure(figsize=(8, 8))
     plt.bar(age_groups.index.astype(str), 100 * age_groups['TARGET'])
-
-    # Plot labeling
-    plt.xticks(rotation = 75); plt.xlabel('Age Group (years)'); plt.ylabel('Failure to Repay (%)')
+    plt.xticks(rotation=75); plt.xlabel('Age Group (years)'); plt.ylabel('Failure to Repay (%)')
     plt.title('Failure to Repay by Age Group')
+    plt.tight_layout()
+    plt.savefig('exploratory_data_analysis/failure_by_age_group.png', bbox_inches='tight', dpi=300)
+    plt.close()
 
     # Extract the EXT_SOURCE variables and show correlations
     ext_data = train_data[['TARGET', 'EXT_SOURCE_1', 'EXT_SOURCE_2', 'EXT_SOURCE_3', 'DAYS_BIRTH']]
@@ -519,7 +705,7 @@ def corr_exam(train_data):
     sns.heatmap(ext_data_corrs, cmap = plt.cm.RdYlBu_r, vmin = -0.25, annot = True, vmax = 0.6)
     plt.title('Correlation Heatmap')
     plt.savefig('exploratory_data_analysis/ext_source_correlation_heatmap.png', bbox_inches='tight', dpi=300)  
-    plt.show()
+    plt.close()
     
     # Display the distribution of each of these features colored by the value of the target
     plt.figure(figsize = (10, 12))
@@ -540,15 +726,19 @@ def corr_exam(train_data):
         
     plt.tight_layout(h_pad = 2.5)
     plt.savefig('exploratory_data_analysis/ext_source_distribution_by_target.png', bbox_inches='tight', dpi=300)
-    plt.show()
+    plt.close()
 
     return 
 
+def feature_importance(train_data):
+
+    return
 
 def main():
     # List files available
     # print(os.listdir("data/"))
 
+    # ===============================================EDA===============================================
     print(80*'=')
     print("========================DATA ANALYSIS========================")
     print(80*'=')
@@ -571,6 +761,11 @@ def main():
 
     print("=====================================EXAMING CORRELATIONS======================================")
     corr_exam(train_data_en)
+
+    # ==========================================FEATURE ENGINEERING==========================================
+
+    # ==========================================FEATURE IMPORTANCE==========================================
+    # feature_importance(train_data_en)
 
 if __name__ == "__main__":
     main()
