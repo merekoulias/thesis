@@ -101,225 +101,225 @@ def load_and_preview_data():
     except FileNotFoundError:
         print(f"application_test.csv not found")
 
-    # # Column Types
-    # print("====================================COLUMN TYPES====================================")
-    # print("Number of each column type in training data:")
-    # print(train_data.dtypes.value_counts())
-    # print(80*'=')
-    # print("Number of unique entries (classes) in each of the categorial (object) columns:")
-    # print(train_data.select_dtypes('object').apply(pd.Series.nunique, axis = 0))
+    # Column Types
+    print("====================================COLUMN TYPES====================================")
+    print("Number of each column type in training data:")
+    print(train_data.dtypes.value_counts())
+    print(80*'=')
+    print("Number of unique entries (classes) in each of the categorial (object) columns:")
+    print(train_data.select_dtypes('object').apply(pd.Series.nunique, axis = 0))
 
-    # # Target distribution
-    # print("================EXAMINING THE DISTRIBUTION OF THE TARGET COLUMN================")
-    # print(train_data['TARGET'].value_counts())
-    # print(80*'=')
+    # Target distribution
+    print("================EXAMINING THE DISTRIBUTION OF THE TARGET COLUMN================")
+    print(train_data['TARGET'].value_counts())
+    print(80*'=')
 
-    # # Target distribution plot
-    # print("Plotting TARGET histogram to see class distribution")
-    # target_hist = train_data['TARGET'].astype(int).plot.hist()
-    # target_hist.set_xlabel("TARGET")
-    # target_hist.set_ylabel("Number of Applicants")
-    # print("Saving histogram to exploratory_data_analysis/target_histogram.png")
-    # plt.savefig('exploratory_data_analysis/target_histogram.png', bbox_inches='tight', dpi=300)
-    # plt.close()
-    # print(80*'=')
+    # Target distribution plot
+    print("Plotting TARGET histogram to see class distribution")
+    target_hist = train_data['TARGET'].astype(int).plot.hist()
+    target_hist.set_xlabel("TARGET")
+    target_hist.set_ylabel("Number of Applicants")
+    print("Saving histogram to exploratory_data_analysis/target_histogram.png")
+    plt.savefig('exploratory_data_analysis/target_histogram.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
 
-    # # Gender distribution
-    # print("================EXAMINING THE DISTRIBUTION OF THE GENDER COLUMN================")
-    # print(train_data['CODE_GENDER'].value_counts())
-    # print(80*'=')
+    # Gender distribution
+    print("================EXAMINING THE DISTRIBUTION OF THE GENDER COLUMN================")
+    print(train_data['CODE_GENDER'].value_counts())
+    print(80*'=')
 
-    # # NAME_EDUCATION_TYPE donut chart
-    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S EDUCATION LEVEL (NAME_EDUCATION_TYPE COLUMN)================")
-    # name_education_type = train_data["NAME_EDUCATION_TYPE"].value_counts()
-    # plt.figure(figsize=(6,6))
-    # wedges, texts, autotexts = plt.pie(name_education_type.values, 
-    #         labels=name_education_type.index, 
-    #         startangle=90, 
-    #         counterclock=False,
-    #         wedgeprops=dict(width=0.4, edgecolor='w'),
-    #         autopct='%1.1f%%',           
-    #         pctdistance=0.75)
-    # plt.title('Types of Education')
-    # plt.legend(wedges, name_education_type.index, title='Education Level',
-    #        loc='center left', bbox_to_anchor=(1.0, 0.5))
-    # plt.close()
-    # plt.savefig('exploratory_data_analysis/education_level_donut.png', bbox_inches='tight', dpi=300)
-    # print(f"Saved static donut to 'exploratory_data_analysis/education_level_donut.png'")
-    # print(80*'=')
+    # NAME_EDUCATION_TYPE donut chart
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S EDUCATION LEVEL (NAME_EDUCATION_TYPE COLUMN)================")
+    name_education_type = train_data["NAME_EDUCATION_TYPE"].value_counts()
+    plt.figure(figsize=(6,6))
+    wedges, texts, autotexts = plt.pie(name_education_type.values, 
+            labels=name_education_type.index, 
+            startangle=90, 
+            counterclock=False,
+            wedgeprops=dict(width=0.4, edgecolor='w'),
+            autopct='%1.1f%%',           
+            pctdistance=0.75)
+    plt.title('Types of Education')
+    plt.legend(wedges, name_education_type.index, title='Education Level',
+           loc='center left', bbox_to_anchor=(1.0, 0.5))
+    plt.close()
+    plt.savefig('exploratory_data_analysis/education_level_donut.png', bbox_inches='tight', dpi=300)
+    print(f"Saved static donut to 'exploratory_data_analysis/education_level_donut.png'")
+    print(80*'=')
 
-    # # NAME_EDUCATION_TYPE distribution plot grouped by TARGET
-    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S EDUCATION LEVEL (NAME_EDUCATION_TYPE COLUMN) GROUPED BY TARGET================")
-    # plt.figure(figsize=(12,5))
-    # sns.countplot(data=train_data, x='NAME_EDUCATION_TYPE', hue='TARGET')
-    # plt.title("Distribution of Education Level by Target")
-    # plt.savefig('exploratory_data_analysis/education_level_by_target.png', bbox_inches='tight', dpi=300)
-    # plt.close()
-    # print(80*'=')
+    # NAME_EDUCATION_TYPE distribution plot grouped by TARGET
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S EDUCATION LEVEL (NAME_EDUCATION_TYPE COLUMN) GROUPED BY TARGET================")
+    plt.figure(figsize=(12,5))
+    sns.countplot(data=train_data, x='NAME_EDUCATION_TYPE', hue='TARGET')
+    plt.title("Distribution of Education Level by Target")
+    plt.savefig('exploratory_data_analysis/education_level_by_target.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
 
-    # # AMT_CREDIT distribution plot
-    # print("================EXAMINING THE DISTRIBUTION OF THE AMT_CREDIT COLUMN================")
-    # plt.figure(figsize=(12,5))
-    # plt.title("Distribution of AMT_CREDIT")
-    # sns.distplot(train_data["AMT_CREDIT"])
-    # plt.savefig('exploratory_data_analysis/amt_credit_distribution.png', bbox_inches='tight', dpi=300)
-    # plt.close()
-    # print(80*'=')
+    # AMT_CREDIT distribution plot
+    print("================EXAMINING THE DISTRIBUTION OF THE AMT_CREDIT COLUMN================")
+    plt.figure(figsize=(12,5))
+    plt.title("Distribution of AMT_CREDIT")
+    sns.distplot(train_data["AMT_CREDIT"])
+    plt.savefig('exploratory_data_analysis/amt_credit_distribution.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
 
-    # # AMT_TOTAL_INCOME distribution plot
-    # print("================EXAMINING THE DISTRIBUTION OF THE AMT_TOTAL_INCOME COLUMN================")
-    # plt.figure(figsize=(12,5))
-    # plt.title("Distribution of AMT_INCOME_TOTAL")
-    # sns.distplot(train_data["AMT_INCOME_TOTAL"].dropna())
-    # plt.savefig('exploratory_data_analysis/amt_total_income_distribution.png', bbox_inches='tight', dpi=300)
-    # plt.close()
-    # print(80*'=')
+    # AMT_TOTAL_INCOME distribution plot
+    print("================EXAMINING THE DISTRIBUTION OF THE AMT_TOTAL_INCOME COLUMN================")
+    plt.figure(figsize=(12,5))
+    plt.title("Distribution of AMT_INCOME_TOTAL")
+    sns.distplot(train_data["AMT_INCOME_TOTAL"].dropna())
+    plt.savefig('exploratory_data_analysis/amt_total_income_distribution.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
 
-    # # AMT_GOODS_PRICE distribution plot
-    # print("================EXAMINING THE DISTRIBUTION OF THE AMT_GOODS_PRICE COLUMN================")
-    # plt.figure(figsize=(12,5))
-    # plt.title("Distribution of AMT_GOODS_PRICE")
-    # sns.distplot(train_data["AMT_GOODS_PRICE"].dropna())
-    # plt.savefig('exploratory_data_analysis/amt_goods_price_distribution.png', bbox_inches='tight', dpi=300)
-    # plt.close()
-    # print(80*'=')
+    # AMT_GOODS_PRICE distribution plot
+    print("================EXAMINING THE DISTRIBUTION OF THE AMT_GOODS_PRICE COLUMN================")
+    plt.figure(figsize=(12,5))
+    plt.title("Distribution of AMT_GOODS_PRICE")
+    sns.distplot(train_data["AMT_GOODS_PRICE"].dropna())
+    plt.savefig('exploratory_data_analysis/amt_goods_price_distribution.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
 
-    # # NAME_CONTRACT_TYPE donut chart
-    # print("================EXAMINING THE DISTRIBUTION OF LOAN TYPE (NAME_CONTRACT_TYPE COLUMN)================")
-    # name_contract_type = train_data["NAME_CONTRACT_TYPE"].value_counts()
-    # plt.figure(figsize=(6,6))
-    # wedges, texts, autotexts = plt.pie(name_contract_type.values, 
-    #         labels=name_contract_type.index, 
-    #         startangle=90, 
-    #         counterclock=False,
-    #         wedgeprops=dict(width=0.4, edgecolor='w'),
-    #         autopct='%1.1f%%',           
-    #         pctdistance=0.75)
-    # plt.title('Types of loan')
-    # plt.legend(wedges, name_contract_type.index, title='Loan Type',
-    #        loc='center left', bbox_to_anchor=(1.0, 0.5))
-    # plt.close()
-    # plt.savefig('exploratory_data_analysis/loan_type_donut.png', bbox_inches='tight', dpi=300)
-    # print(f"Saved static donut to 'exploratory_data_analysis/loan_type_donut.png'")
-    # print(80*'=')
+    # NAME_CONTRACT_TYPE donut chart
+    print("================EXAMINING THE DISTRIBUTION OF LOAN TYPE (NAME_CONTRACT_TYPE COLUMN)================")
+    name_contract_type = train_data["NAME_CONTRACT_TYPE"].value_counts()
+    plt.figure(figsize=(6,6))
+    wedges, texts, autotexts = plt.pie(name_contract_type.values, 
+            labels=name_contract_type.index, 
+            startangle=90, 
+            counterclock=False,
+            wedgeprops=dict(width=0.4, edgecolor='w'),
+            autopct='%1.1f%%',           
+            pctdistance=0.75)
+    plt.title('Types of loan')
+    plt.legend(wedges, name_contract_type.index, title='Loan Type',
+           loc='center left', bbox_to_anchor=(1.0, 0.5))
+    plt.close()
+    plt.savefig('exploratory_data_analysis/loan_type_donut.png', bbox_inches='tight', dpi=300)
+    print(f"Saved static donut to 'exploratory_data_analysis/loan_type_donut.png'")
+    print(80*'=')
 
-    # # NAME_INCOME_TYPE donut chart
-    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S INCOME SOURCE (NAME_INCOME_TYPE COLUMN)================")
-    # name_income_type = train_data["NAME_INCOME_TYPE"].value_counts()
-    # plt.figure(figsize=(6,6))
-    # wedges, texts, autotexts = plt.pie(name_income_type.values, 
-    #         labels=name_income_type.index, 
-    #         startangle=90, 
-    #         counterclock=False,
-    #         wedgeprops=dict(width=0.4, edgecolor='w'),
-    #         autopct='%1.1f%%',           
-    #         pctdistance=0.75)
-    # plt.title('Applicant\'s Income Source')
-    # plt.legend(wedges, name_income_type.index, title='Income Source',
-    #        loc='center left', bbox_to_anchor=(1.0, 0.5))
-    # plt.close()
-    # plt.savefig('exploratory_data_analysis/income_source_donut.png', bbox_inches='tight', dpi=300)
-    # print(f"Saved static donut to 'exploratory_data_analysis/income_source_donut.png'")
-    # print(80*'=')
+    # NAME_INCOME_TYPE donut chart
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S INCOME SOURCE (NAME_INCOME_TYPE COLUMN)================")
+    name_income_type = train_data["NAME_INCOME_TYPE"].value_counts()
+    plt.figure(figsize=(6,6))
+    wedges, texts, autotexts = plt.pie(name_income_type.values, 
+            labels=name_income_type.index, 
+            startangle=90, 
+            counterclock=False,
+            wedgeprops=dict(width=0.4, edgecolor='w'),
+            autopct='%1.1f%%',           
+            pctdistance=0.75)
+    plt.title('Applicant\'s Income Source')
+    plt.legend(wedges, name_income_type.index, title='Income Source',
+           loc='center left', bbox_to_anchor=(1.0, 0.5))
+    plt.close()
+    plt.savefig('exploratory_data_analysis/income_source_donut.png', bbox_inches='tight', dpi=300)
+    print(f"Saved static donut to 'exploratory_data_analysis/income_source_donut.png'")
+    print(80*'=')
     
-    # # NAME_INCOME_TYPE distribution grouped by TARGET
-    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S INCOME SOURCE (NAME_INCOME_TYPE COLUMN) GROUPED BY TARGET================")
-    # plt.figure(figsize=(12, 6))
-    # sns.countplot(data=train_data, x="NAME_INCOME_TYPE", hue="TARGET")
-    # plt.title("Distribution of Applicant's Income Source by Target")
-    # plt.xlabel("Income Source")
-    # plt.ylabel("Count")
-    # plt.xticks(rotation=45, ha='right')
-    # plt.tight_layout()
-    # plt.savefig('exploratory_data_analysis/income_source_by_target.png', bbox_inches='tight', dpi=300)
-    # plt.close()
-    # print(80*'=')
+    # NAME_INCOME_TYPE distribution grouped by TARGET
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S INCOME SOURCE (NAME_INCOME_TYPE COLUMN) GROUPED BY TARGET================")
+    plt.figure(figsize=(12, 6))
+    sns.countplot(data=train_data, x="NAME_INCOME_TYPE", hue="TARGET")
+    plt.title("Distribution of Applicant's Income Source by Target")
+    plt.xlabel("Income Source")
+    plt.ylabel("Count")
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig('exploratory_data_analysis/income_source_by_target.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
 
-    # # OCCUPATION_TYPE distribution plot
-    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S OCCUPATION (OCCUPATION_TYPE COLUMN)================")
-    # # counts-only bar chart (dropna by default)
-    # occupation_type = train_data["OCCUPATION_TYPE"].value_counts()
-    # plt.figure(figsize=(10, 6))
-    # bars = plt.bar(occupation_type.index, occupation_type.values, color='green', edgecolor='k')
-    # plt.title("Occupation of Applicants who applied for loan")
-    # plt.xlabel("Occupation")
-    # plt.ylabel("Count")
-    # plt.xticks(rotation=45, ha='right')
-    # plt.tight_layout()
+    # OCCUPATION_TYPE distribution plot
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S OCCUPATION (OCCUPATION_TYPE COLUMN)================")
+    # counts-only bar chart (dropna by default)
+    occupation_type = train_data["OCCUPATION_TYPE"].value_counts()
+    plt.figure(figsize=(10, 6))
+    bars = plt.bar(occupation_type.index, occupation_type.values, color='green', edgecolor='k')
+    plt.title("Occupation of Applicants who applied for loan")
+    plt.xlabel("Occupation")
+    plt.ylabel("Count")
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
 
-    # # annotate counts above bars
-    # for b in bars:
-    #     h = b.get_height()
-    #     plt.text(b.get_x() + b.get_width() / 2, h + max(1, occupation_type.values.max()*0.01), f'{int(h)}',
-    #             ha='center', va='bottom', fontsize=9)
+    # annotate counts above bars
+    for b in bars:
+        h = b.get_height()
+        plt.text(b.get_x() + b.get_width() / 2, h + max(1, occupation_type.values.max()*0.01), f'{int(h)}',
+                ha='center', va='bottom', fontsize=9)
 
-    # plt.savefig('exploratory_data_analysis/occupation_type_bar_chart.png', dpi=300, bbox_inches='tight')
-    # print(f"Saved static bar chart to 'exploratory_data_analysis/occupation_type_bar_chart.png'")
-    # plt.close()
+    plt.savefig('exploratory_data_analysis/occupation_type_bar_chart.png', dpi=300, bbox_inches='tight')
+    print(f"Saved static bar chart to 'exploratory_data_analysis/occupation_type_bar_chart.png'")
+    plt.close()
 
-    # # OCCUPATION_TYPE distribution plot grouped by TARGET
-    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S OCCUPATION (OCCUPATION_TYPE COLUMN) GROUPED BY TARGET================")
-    # plt.figure(figsize=(12, 6))
-    # sns.countplot(data=train_data, x="OCCUPATION_TYPE", hue="TARGET")
-    # plt.title("Distribution of Applicant's Occupation by Target")
-    # plt.xlabel("Occupation")
-    # plt.ylabel("Count")
-    # plt.xticks(rotation=45, ha='right')
-    # plt.tight_layout()
-    # plt.savefig('exploratory_data_analysis/occupation_type_by_target.png', bbox_inches='tight', dpi=300)
-    # plt.close()
-    # print(80*'=')
+    # OCCUPATION_TYPE distribution plot grouped by TARGET
+    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S OCCUPATION (OCCUPATION_TYPE COLUMN) GROUPED BY TARGET================")
+    plt.figure(figsize=(12, 6))
+    sns.countplot(data=train_data, x="OCCUPATION_TYPE", hue="TARGET")
+    plt.title("Distribution of Applicant's Occupation by Target")
+    plt.xlabel("Occupation")
+    plt.ylabel("Count")
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig('exploratory_data_analysis/occupation_type_by_target.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
 
-    # # ORGANIZATION_TYPE distribution plot
-    # print("================EXAMINING THE DISTRIBUTION OF THE ORGANIZATION THE APPLICANT'S WORKS (ORGANIZATION_TYPE COLUMN)================")
-    # organization_type = train_data["ORGANIZATION_TYPE"].value_counts(dropna=False)
-    # total = int(organization_type.sum())
+    # ORGANIZATION_TYPE distribution plot
+    print("================EXAMINING THE DISTRIBUTION OF THE ORGANIZATION THE APPLICANT'S WORKS (ORGANIZATION_TYPE COLUMN)================")
+    organization_type = train_data["ORGANIZATION_TYPE"].value_counts(dropna=False)
+    total = int(organization_type.sum())
 
-    # labels = organization_type.index.astype(str)
-    # counts = organization_type.values
+    labels = organization_type.index.astype(str)
+    counts = organization_type.values
 
-    # fig, ax = plt.subplots(figsize=(12, 10))
-    # y_pos = np.arange(len(labels))
+    fig, ax = plt.subplots(figsize=(12, 10))
+    y_pos = np.arange(len(labels))
 
-    # # horizontal bars (easier to read long labels)
-    # bars = ax.barh(y_pos, counts, color='green', edgecolor='k', height=0.5)
+    # horizontal bars (easier to read long labels)
+    bars = ax.barh(y_pos, counts, color='green', edgecolor='k', height=0.5)
 
-    # # invert so largest is on top
-    # ax.invert_yaxis()
+    # invert so largest is on top
+    ax.invert_yaxis()
 
-    # # label formatting
-    # ax.set_yticks(y_pos)
-    # ax.set_yticklabels(labels, fontsize=9)
-    # ax.set_xlabel('Count', fontsize=12)
-    # ax.set_title("Organization of Applicants who applied for loan", fontsize=14)
+    # label formatting
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, fontsize=9)
+    ax.set_xlabel('Count', fontsize=12)
+    ax.set_title("Organization of Applicants who applied for loan", fontsize=14)
 
-    # # thousands separator on x-axis
-    # ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, p: format(int(x), ',')))
+    # thousands separator on x-axis
+    ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, p: format(int(x), ',')))
 
-    # # annotate counts and percentages just outside the bars
-    # max_count = counts.max() if len(counts) else 1
-    # pad = max_count * 0.01
-    # for i, v in enumerate(counts):
-    #     pct = v / total * 100.0 if total else 0.0
-    #     ax.text(v + pad, i, f'{v:,}  ({pct:.1f}%)', va='center', fontsize=8)
+    # annotate counts and percentages just outside the bars
+    max_count = counts.max() if len(counts) else 1
+    pad = max_count * 0.01
+    for i, v in enumerate(counts):
+        pct = v / total * 100.0 if total else 0.0
+        ax.text(v + pad, i, f'{v:,}  ({pct:.1f}%)', va='center', fontsize=8)
 
-    # plt.tight_layout()
-    # plt.savefig('exploratory_data_analysis/organization_type_bar_chart.png', dpi=300, bbox_inches='tight')
-    # print(f"Saved static bar chart to 'exploratory_data_analysis/organization_type_bar_chart.png'")
-    # plt.close()
+    plt.tight_layout()
+    plt.savefig('exploratory_data_analysis/organization_type_bar_chart.png', dpi=300, bbox_inches='tight')
+    print(f"Saved static bar chart to 'exploratory_data_analysis/organization_type_bar_chart.png'")
+    plt.close()
 
-    # # ORGANIZATION_TYPE distribution plot grouped by TARGET
-    # print("================EXAMINING THE DISTRIBUTION OF THE ORGANIZATION THE APPLICANT'S WORKS (ORGANIZATION_TYPE COLUMN) GROUPED BY TARGET================")
-    # plt.figure(figsize=(12, 6))
-    # sns.countplot(data=train_data, x="ORGANIZATION_TYPE", hue="TARGET")
-    # plt.title("Distribution of Organization Type by Target")
-    # plt.xlabel("Organization Type")
-    # plt.ylabel("Count")
-    # plt.xticks(rotation=45, ha='right')
-    # plt.tight_layout()
-    # plt.savefig('exploratory_data_analysis/organization_type_by_target.png', bbox_inches='tight', dpi=300)
-    # plt.close()
-    # print(80*'=')
+    # ORGANIZATION_TYPE distribution plot grouped by TARGET
+    print("================EXAMINING THE DISTRIBUTION OF THE ORGANIZATION THE APPLICANT'S WORKS (ORGANIZATION_TYPE COLUMN) GROUPED BY TARGET================")
+    plt.figure(figsize=(12, 6))
+    sns.countplot(data=train_data, x="ORGANIZATION_TYPE", hue="TARGET")
+    plt.title("Distribution of Organization Type by Target")
+    plt.xlabel("Organization Type")
+    plt.ylabel("Count")
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.savefig('exploratory_data_analysis/organization_type_by_target.png', bbox_inches='tight', dpi=300)
+    plt.close()
+    print(80*'=')
 
     return train_data, test_data
 
