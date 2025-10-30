@@ -12,7 +12,7 @@ import seaborn as sns
 import warnings
 warnings.filterwarnings('ignore')
 
-from data_analysis import obj_encoding, data_correlations, get_features_distribution, correlation_scores, features_scores, score_feature_selection
+from data_analysis import obj_encoding, data_correlations, get_features_distribution, correlation_scores, features_scores, score_feature_selection, model
 
 from pathlib import Path
 
@@ -188,6 +188,8 @@ def main():
         print('\t SPLIT : %.6f +/- %.6f' % (split_results[0], split_results[1]))
         gain_results = score_feature_selection(df=train_data, train_features=gain_feats, cat_cols=gain_cat_feats, target=train_data['TARGET'])
         print('\t GAIN  : %.6f +/- %.6f' % (gain_results[0], gain_results[1]))
+
+    model(train_data, test_data, categorical_features, path, n_folds=5)
 
 
 if __name__ == "__main__":
