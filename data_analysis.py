@@ -90,12 +90,12 @@ def load_and_preview_data():
     # Testing data features
     try:
         print(f"Loading test data ('application_test.csv') from data folder...")
-        test_data = pd.read_csv('data/application_test.csv')
+        test_data_en = pd.read_csv('data/application_test.csv')
         print(f"Data loaded successfully")
         print(80*'=')
-        print('Testing data shape: ', test_data.shape)
+        print('Testing data shape: ', test_data_en.shape)
         print("First 5 rows of test data:")
-        print(test_data.head())
+        print(test_data_en.head())
         print(80*'=')
     
     except FileNotFoundError:
@@ -321,7 +321,7 @@ def load_and_preview_data():
     plt.close()
     print(80*'=')
 
-    return train_data, test_data
+    return train_data, test_data_en
 
 def missing_values(df, output_folder):
         # Total missing values
@@ -630,7 +630,7 @@ def score_feature_selection(df, train_features, cat_cols, target):
     return hist['valid auc-mean'][-1], hist['valid auc-stdv'][-1]
     
 
-def objects_encoding(train_data, test_data):
+def objects_encoding(train_data, test_data_en):
     """
     for any categorical variable (dtype == object) with 2 unique categories, 
     we will use label encoding, 
@@ -638,7 +638,7 @@ def objects_encoding(train_data, test_data):
     we will use one-hot encoding.
     """
     # Drop rows where CODE_GENDER == 'XNA' - only 4 rows in training data 
-    for df_name, df in (('train_data', train_data), ('test_data', test_data)):
+    for df_name, df in (('train_data', train_data), ('test_data_en', test_data_en)):
         if 'CODE_GENDER' in df.columns:
             xna_mask = df['CODE_GENDER'] == 'XNA'
             n_xna = int(xna_mask.sum())
@@ -661,7 +661,7 @@ def objects_encoding(train_data, test_data):
                 le.fit(train_data[col])
                 # Label encoding - Transform both training and testing data
                 train_data[col] = le.transform(train_data[col])
-                test_data[col] = le.transform(test_data[col])
+                test_data_en[col] = le.transform(test_data_en[col])
 
                 # Keep track of how many columns were label encoded
                 le_count += 1
@@ -682,26 +682,26 @@ def objects_encoding(train_data, test_data):
 
     # one-hot encoding of categorical variables
     train_data = pd.get_dummies(train_data)
-    test_data = pd.get_dummies(test_data)
+    test_data_en = pd.get_dummies(test_data_en)
 
     # Check if training and test data are aligned
-    if(train_data.shape[1] != test_data.shape[1]+1):
+    if(train_data.shape[1] != test_data_en.shape[1]+1):
         train_labels = train_data['TARGET']
 
         # Align the training and testing data, keep only columns present in both dataframes
-        train_data, test_data = train_data.align(test_data, join = 'inner', axis = 1)
+        train_data, test_data_en = train_data.align(test_data_en, join = 'inner', axis = 1)
 
         # Add the target back in
         train_data['TARGET'] = train_labels
 
         print("Training Features' columns after one-hot encoding: ", train_data.shape[1])
-        print("Testing Features' columns after one-hot encoding: ", test_data.shape[1])
+        print("Testing Features' columns after one-hot encoding: ", test_data_en.shape[1])
 
     else:
         print("Training Features' columns after one-hot encoding: ", train_data.shape[1])
-        print("Testing Features' columns after one-hot encoding: ", test_data.shape[1])
+        print("Testing Features' columns after one-hot encoding: ", test_data_en.shape[1])
 
-    return train_data, test_data
+    return train_data, test_data_en
 
 def description_analysis(train_data, output_folder):
     # Compute describe() on numeric-only data and save
@@ -831,7 +831,7 @@ def description_analysis(train_data, output_folder):
 
     return desc_df
 
-def anomalies_handling(train_data, test_data):
+def anomalies_handling(train_data, test_data_en):
     """
     From data's description I found anomaly in DAYS_EMPLOYED column
     """
@@ -862,10 +862,10 @@ def anomalies_handling(train_data, test_data):
     plt.close()
 
     # Fill in the existing column with np.nan in the testing data
-    test_data['DAYS_EMPLOYED_ANOM'] = test_data["DAYS_EMPLOYED"] == 365243
-    test_data["DAYS_EMPLOYED"].replace({365243: np.nan}, inplace = True)
+    test_data_en['DAYS_EMPLOYED_ANOM'] = test_data_en["DAYS_EMPLOYED"] == 365243
+    test_data_en["DAYS_EMPLOYED"].replace({365243: np.nan}, inplace = True)
 
-    print('There are %d anomalies in the test data out of %d entries' % (test_data["DAYS_EMPLOYED_ANOM"].sum(), len(test_data)))
+    print('There are %d anomalies in the test data out of %d entries' % (test_data_en["DAYS_EMPLOYED_ANOM"].sum(), len(test_data_en)))
 
     return 
 
@@ -1088,13 +1088,10 @@ def model(features, test_features, categorical_features, output_folder, n_folds 
         
     print('Training Data Shape: ', features.shape)
     print('Testing Data Shape: ', test_features.shape)
-    
-    # Extract feature names
-    feature_names = list(features.columns)
-    
-    # Convert to np arrays
-    features = np.array(features)
-    test_features = np.array(test_features)
+
+    # Keep features as DataFrames so LightGBM can accept categorical column NAMES
+    # Filter categorical features to include only those present in the dataframe
+    cat_feature_names = [c for c in categorical_features if c in features.columns]
     
     # Create the kfold object
     k_fold = KFold(n_splits = n_folds, shuffle = True, random_state = 50)
@@ -1111,11 +1108,11 @@ def model(features, test_features, categorical_features, output_folder, n_folds 
     
     # Iterate through each fold
     for train_indices, valid_indices in k_fold.split(features):
-        
-        # Training data for the fold
-        train_features, train_labels = features[train_indices], labels[train_indices]
+
+        # Training data for the fold (use iloc to select rows from DataFrame/Series)
+        train_features, train_labels = features.iloc[train_indices], labels.iloc[train_indices]
         # Validation data for the fold
-        valid_features, valid_labels = features[valid_indices], labels[valid_indices]
+        valid_features, valid_labels = features.iloc[valid_indices], labels.iloc[valid_indices]
         
         # Create the model
         model = lgb.LGBMClassifier(n_estimators=10000, objective = 'binary', 
@@ -1123,11 +1120,15 @@ def model(features, test_features, categorical_features, output_folder, n_folds 
                                    reg_alpha = 0.1, reg_lambda = 0.1, 
                                    subsample = 0.8, n_jobs = -1, random_state = 50)
         
+        callbacks = [
+            lgb.early_stopping(stopping_rounds=100),
+            lgb.log_evaluation(period=200)
+        ]
+
         # Train the model
-        model.fit(train_features, train_labels, eval_metric = 'auc',
-                  eval_set = [(valid_features, valid_labels), (train_features, train_labels)],
-                  eval_names = ['valid', 'train'], categorical_feature = categorical_features,
-                  early_stopping_rounds = 100, verbose = 200)
+        model.fit(train_features, train_labels, eval_metric='auc',
+                  eval_set=[(valid_features, valid_labels), (train_features, train_labels)],
+                  eval_names=['valid', 'train'], categorical_feature=cat_feature_names, callbacks=callbacks)
         
         # Record the best iteration
         best_iteration = model.best_iteration_
@@ -1187,30 +1188,30 @@ def main():
     print(80*'=')
     print("========================DATA ANALYSIS========================")
     print(80*'=')
-    train_data, test_data = load_and_preview_data() # Load and preview data
+    train_data, test_data_en = load_and_preview_data() # Load and preview data
 
     print("============================EXAMINING MISSING VALUES=============================")
     missing_values(train_data, output_folder)
 
     print("============================LABEL ENCODING AND ONE-HOT ENCODING=============================")
-    # train_data_en, test_data_en = objects_encoding(train_data, test_data)
-    train_data, categorical_features = obj_encoding(train_data)
-    # test_data, _ = obj_encoding(test_data)
+    # train_data_en, test_data_en_en = objects_encoding(train_data, test_data_en)
+    train_data_en, categorical_features = obj_encoding(train_data)
+    test_data_en_en, _ = obj_encoding(test_data_en)
 
     print("============================DATA DESCRIPTION AND ANALYSIS=============================")
-    desc_df = description_analysis(train_data, output_folder)
+    desc_df = description_analysis(train_data_en, output_folder)
 
     print("=====================================HANDLING ANOMALIES======================================")
-    anomalies_handling(train_data, test_data)
+    anomalies_handling(train_data_en, test_data_en_en)
 
     print("=====================================CORRELATIONS======================================")
-    data_correlations(train_data, output_folder, desc_df)
+    data_correlations(train_data_en, output_folder, desc_df)
 
     print("=====================================EXAMING CORRELATIONS======================================")
-    corr_exam(train_data, output_folder)
+    corr_exam(train_data_en, output_folder)
 
     # ==========================================FEATURE IMPORTANCE==========================================
-    actual_imp_df, null_imp_df = get_features_distribution(train_data, categorical_features, output_folder)
+    actual_imp_df, null_imp_df = get_features_distribution(train_data_en, categorical_features, output_folder)
     
     # distribution examples of two features
     display_distributions(actual_imp_df, null_imp_df, output_folder, feature='LIVINGAPARTMENTS_AVG')
@@ -1227,11 +1228,13 @@ def main():
         gain_cat_feats = [_f for _f, _, _score in corr_scores if (_score >= threshold) & (_f in categorical_features)]
                                                                                              
         print('Results for threshold %3d' % threshold)
-        split_results = score_feature_selection(df=train_data, train_features=split_feats, cat_cols=split_cat_feats, target=train_data['TARGET'])
+        split_results = score_feature_selection(df=train_data_en, train_features=split_feats, cat_cols=split_cat_feats, target=train_data_en['TARGET'])
         print('\t SPLIT : %.6f +/- %.6f' % (split_results[0], split_results[1]))
-        gain_results = score_feature_selection(df=train_data, train_features=gain_feats, cat_cols=gain_cat_feats, target=train_data['TARGET'])
+        gain_results = score_feature_selection(df=train_data_en, train_features=gain_feats, cat_cols=gain_cat_feats, target=train_data_en['TARGET'])
         print('\t GAIN  : %.6f +/- %.6f' % (gain_results[0], gain_results[1]))
 
+    # ==================================================== BASELINE MODEL ====================================================
+    model(train_data_en, test_data_en, categorical_features, output_folder, n_folds=5)
 
 if __name__ == "__main__":
     main()
