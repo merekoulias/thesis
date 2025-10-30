@@ -550,7 +550,7 @@ def features_scores(actual_imp_df, null_imp_df, output_folder):
     sns.barplot(x='gain_score', y='feature', data=scores_df.sort_values('gain_score', ascending=False).iloc[0:70], ax=ax)
     ax.set_title('Feature scores wrt gain importances', fontweight='bold', fontsize=14)
     plt.tight_layout()
-    print("Saving feature scores plot to 'exploratory_data_analysis/feature_scores.png'")
+    print(f'Saving feature scores plot to {output_folder}/feature_scores.png')
     plt.savefig(os.path.join(output_folder, 'feature_scores.png'), bbox_inches='tight', dpi=300)
     plt.close()
 
@@ -587,7 +587,7 @@ def correlation_scores(actual_imp_df, null_imp_df, output_folder):
     plt.tight_layout()
     plt.suptitle("Features' split and gain scores", fontweight='bold', fontsize=16)
     fig.subplots_adjust(top=0.93)
-    print("Saving feature scores plot to 'exploratory_data_analysis/correlation_scores.png'")
+    print(f'Saving feature scores plot to {output_folder}/correlation_scores.png')
     plt.savefig(os.path.join(output_folder, 'correlation_scores.png'), bbox_inches='tight', dpi=300)
     plt.close()
 
