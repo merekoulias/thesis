@@ -32,7 +32,10 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 import psutil
 
-# import gc
+# featuretools for automated feature engineering
+import featuretools as ft
+
+import gc
 # gc.enable()
 
 # Globals used by worker processes (set by initializer)
@@ -57,11 +60,19 @@ def _worker_run(seed):
         # Return the exception to be handled by the parent
         return e
 
+from pathlib import Path
+
+def create_folder():
+    output_folder = Path('exploratory_data_analysis')
+    output_folder.mkdir(parents=True, exist_ok=True)
+    return output_folder
+
 def load_and_preview_data():
     # Training data
     try:
         print(f"Loading data ('application_train.csv') from data folder...")
         train_data = pd.read_csv('data/application_train.csv')
+        # train_data = pd.read_csv('data/application_train.csv').loc[:1000, :]
         print(f"Data loaded successfully")
         print(80*'=')
         print('Training data shape: ', train_data.shape)
@@ -90,229 +101,229 @@ def load_and_preview_data():
     except FileNotFoundError:
         print(f"application_test.csv not found")
 
-    # Column Types
-    print("====================================COLUMN TYPES====================================")
-    print("Number of each column type in training data:")
-    print(train_data.dtypes.value_counts())
-    print(80*'=')
-    print("Number of unique entries (classes) in each of the categorial (object) columns:")
-    print(train_data.select_dtypes('object').apply(pd.Series.nunique, axis = 0))
+    # # Column Types
+    # print("====================================COLUMN TYPES====================================")
+    # print("Number of each column type in training data:")
+    # print(train_data.dtypes.value_counts())
+    # print(80*'=')
+    # print("Number of unique entries (classes) in each of the categorial (object) columns:")
+    # print(train_data.select_dtypes('object').apply(pd.Series.nunique, axis = 0))
 
-    # Target distribution
-    print("================EXAMINING THE DISTRIBUTION OF THE TARGET COLUMN================")
-    print(train_data['TARGET'].value_counts())
-    print(80*'=')
+    # # Target distribution
+    # print("================EXAMINING THE DISTRIBUTION OF THE TARGET COLUMN================")
+    # print(train_data['TARGET'].value_counts())
+    # print(80*'=')
 
-    # Target distribution plot
-    print("Plotting TARGET histogram to see class distribution")
-    target_hist = train_data['TARGET'].astype(int).plot.hist()
-    target_hist.set_xlabel("TARGET")
-    target_hist.set_ylabel("Number of Applicants")
-    print("Saving histogram to exploratory_data_analysis/target_histogram.png")
-    plt.savefig('exploratory_data_analysis/target_histogram.png', bbox_inches='tight', dpi=300)
-    plt.close()
-    print(80*'=')
+    # # Target distribution plot
+    # print("Plotting TARGET histogram to see class distribution")
+    # target_hist = train_data['TARGET'].astype(int).plot.hist()
+    # target_hist.set_xlabel("TARGET")
+    # target_hist.set_ylabel("Number of Applicants")
+    # print("Saving histogram to exploratory_data_analysis/target_histogram.png")
+    # plt.savefig('exploratory_data_analysis/target_histogram.png', bbox_inches='tight', dpi=300)
+    # plt.close()
+    # print(80*'=')
 
-    # Gender distribution
-    print("================EXAMINING THE DISTRIBUTION OF THE GENDER COLUMN================")
-    print(train_data['CODE_GENDER'].value_counts())
-    print(80*'=')
+    # # Gender distribution
+    # print("================EXAMINING THE DISTRIBUTION OF THE GENDER COLUMN================")
+    # print(train_data['CODE_GENDER'].value_counts())
+    # print(80*'=')
 
-    # NAME_EDUCATION_TYPE donut chart
-    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S EDUCATION LEVEL (NAME_EDUCATION_TYPE COLUMN)================")
-    name_education_type = train_data["NAME_EDUCATION_TYPE"].value_counts()
-    plt.figure(figsize=(6,6))
-    wedges, texts, autotexts = plt.pie(name_education_type.values, 
-            labels=name_education_type.index, 
-            startangle=90, 
-            counterclock=False,
-            wedgeprops=dict(width=0.4, edgecolor='w'),
-            autopct='%1.1f%%',           
-            pctdistance=0.75)
-    plt.title('Types of Education')
-    plt.legend(wedges, name_education_type.index, title='Education Level',
-           loc='center left', bbox_to_anchor=(1.0, 0.5))
-    plt.close()
-    plt.savefig('exploratory_data_analysis/education_level_donut.png', bbox_inches='tight', dpi=300)
-    print(f"Saved static donut to 'exploratory_data_analysis/education_level_donut.png'")
-    print(80*'=')
+    # # NAME_EDUCATION_TYPE donut chart
+    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S EDUCATION LEVEL (NAME_EDUCATION_TYPE COLUMN)================")
+    # name_education_type = train_data["NAME_EDUCATION_TYPE"].value_counts()
+    # plt.figure(figsize=(6,6))
+    # wedges, texts, autotexts = plt.pie(name_education_type.values, 
+    #         labels=name_education_type.index, 
+    #         startangle=90, 
+    #         counterclock=False,
+    #         wedgeprops=dict(width=0.4, edgecolor='w'),
+    #         autopct='%1.1f%%',           
+    #         pctdistance=0.75)
+    # plt.title('Types of Education')
+    # plt.legend(wedges, name_education_type.index, title='Education Level',
+    #        loc='center left', bbox_to_anchor=(1.0, 0.5))
+    # plt.close()
+    # plt.savefig('exploratory_data_analysis/education_level_donut.png', bbox_inches='tight', dpi=300)
+    # print(f"Saved static donut to 'exploratory_data_analysis/education_level_donut.png'")
+    # print(80*'=')
 
-    # NAME_EDUCATION_TYPE distribution plot grouped by TARGET
-    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S EDUCATION LEVEL (NAME_EDUCATION_TYPE COLUMN) GROUPED BY TARGET================")
-    plt.figure(figsize=(12,5))
-    sns.countplot(data=train_data, x='NAME_EDUCATION_TYPE', hue='TARGET')
-    plt.title("Distribution of Education Level by Target")
-    plt.savefig('exploratory_data_analysis/education_level_by_target.png', bbox_inches='tight', dpi=300)
-    plt.close()
-    print(80*'=')
+    # # NAME_EDUCATION_TYPE distribution plot grouped by TARGET
+    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S EDUCATION LEVEL (NAME_EDUCATION_TYPE COLUMN) GROUPED BY TARGET================")
+    # plt.figure(figsize=(12,5))
+    # sns.countplot(data=train_data, x='NAME_EDUCATION_TYPE', hue='TARGET')
+    # plt.title("Distribution of Education Level by Target")
+    # plt.savefig('exploratory_data_analysis/education_level_by_target.png', bbox_inches='tight', dpi=300)
+    # plt.close()
+    # print(80*'=')
 
-    # AMT_CREDIT distribution plot
-    print("================EXAMINING THE DISTRIBUTION OF THE AMT_CREDIT COLUMN================")
-    plt.figure(figsize=(12,5))
-    plt.title("Distribution of AMT_CREDIT")
-    sns.distplot(train_data["AMT_CREDIT"])
-    plt.savefig('exploratory_data_analysis/amt_credit_distribution.png', bbox_inches='tight', dpi=300)
-    plt.close()
-    print(80*'=')
+    # # AMT_CREDIT distribution plot
+    # print("================EXAMINING THE DISTRIBUTION OF THE AMT_CREDIT COLUMN================")
+    # plt.figure(figsize=(12,5))
+    # plt.title("Distribution of AMT_CREDIT")
+    # sns.distplot(train_data["AMT_CREDIT"])
+    # plt.savefig('exploratory_data_analysis/amt_credit_distribution.png', bbox_inches='tight', dpi=300)
+    # plt.close()
+    # print(80*'=')
 
-    # AMT_TOTAL_INCOME distribution plot
-    print("================EXAMINING THE DISTRIBUTION OF THE AMT_TOTAL_INCOME COLUMN================")
-    plt.figure(figsize=(12,5))
-    plt.title("Distribution of AMT_INCOME_TOTAL")
-    sns.distplot(train_data["AMT_INCOME_TOTAL"].dropna())
-    plt.savefig('exploratory_data_analysis/amt_total_income_distribution.png', bbox_inches='tight', dpi=300)
-    plt.close()
-    print(80*'=')
+    # # AMT_TOTAL_INCOME distribution plot
+    # print("================EXAMINING THE DISTRIBUTION OF THE AMT_TOTAL_INCOME COLUMN================")
+    # plt.figure(figsize=(12,5))
+    # plt.title("Distribution of AMT_INCOME_TOTAL")
+    # sns.distplot(train_data["AMT_INCOME_TOTAL"].dropna())
+    # plt.savefig('exploratory_data_analysis/amt_total_income_distribution.png', bbox_inches='tight', dpi=300)
+    # plt.close()
+    # print(80*'=')
 
-    # AMT_GOODS_PRICE distribution plot
-    print("================EXAMINING THE DISTRIBUTION OF THE AMT_GOODS_PRICE COLUMN================")
-    plt.figure(figsize=(12,5))
-    plt.title("Distribution of AMT_GOODS_PRICE")
-    sns.distplot(train_data["AMT_GOODS_PRICE"].dropna())
-    plt.savefig('exploratory_data_analysis/amt_goods_price_distribution.png', bbox_inches='tight', dpi=300)
-    plt.close()
-    print(80*'=')
+    # # AMT_GOODS_PRICE distribution plot
+    # print("================EXAMINING THE DISTRIBUTION OF THE AMT_GOODS_PRICE COLUMN================")
+    # plt.figure(figsize=(12,5))
+    # plt.title("Distribution of AMT_GOODS_PRICE")
+    # sns.distplot(train_data["AMT_GOODS_PRICE"].dropna())
+    # plt.savefig('exploratory_data_analysis/amt_goods_price_distribution.png', bbox_inches='tight', dpi=300)
+    # plt.close()
+    # print(80*'=')
 
-    # NAME_CONTRACT_TYPE donut chart
-    print("================EXAMINING THE DISTRIBUTION OF LOAN TYPE (NAME_CONTRACT_TYPE COLUMN)================")
-    name_contract_type = train_data["NAME_CONTRACT_TYPE"].value_counts()
-    plt.figure(figsize=(6,6))
-    wedges, texts, autotexts = plt.pie(name_contract_type.values, 
-            labels=name_contract_type.index, 
-            startangle=90, 
-            counterclock=False,
-            wedgeprops=dict(width=0.4, edgecolor='w'),
-            autopct='%1.1f%%',           
-            pctdistance=0.75)
-    plt.title('Types of loan')
-    plt.legend(wedges, name_contract_type.index, title='Loan Type',
-           loc='center left', bbox_to_anchor=(1.0, 0.5))
-    plt.close()
-    plt.savefig('exploratory_data_analysis/loan_type_donut.png', bbox_inches='tight', dpi=300)
-    print(f"Saved static donut to 'exploratory_data_analysis/loan_type_donut.png'")
-    print(80*'=')
+    # # NAME_CONTRACT_TYPE donut chart
+    # print("================EXAMINING THE DISTRIBUTION OF LOAN TYPE (NAME_CONTRACT_TYPE COLUMN)================")
+    # name_contract_type = train_data["NAME_CONTRACT_TYPE"].value_counts()
+    # plt.figure(figsize=(6,6))
+    # wedges, texts, autotexts = plt.pie(name_contract_type.values, 
+    #         labels=name_contract_type.index, 
+    #         startangle=90, 
+    #         counterclock=False,
+    #         wedgeprops=dict(width=0.4, edgecolor='w'),
+    #         autopct='%1.1f%%',           
+    #         pctdistance=0.75)
+    # plt.title('Types of loan')
+    # plt.legend(wedges, name_contract_type.index, title='Loan Type',
+    #        loc='center left', bbox_to_anchor=(1.0, 0.5))
+    # plt.close()
+    # plt.savefig('exploratory_data_analysis/loan_type_donut.png', bbox_inches='tight', dpi=300)
+    # print(f"Saved static donut to 'exploratory_data_analysis/loan_type_donut.png'")
+    # print(80*'=')
 
-    # NAME_INCOME_TYPE donut chart
-    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S INCOME SOURCE (NAME_INCOME_TYPE COLUMN)================")
-    name_income_type = train_data["NAME_INCOME_TYPE"].value_counts()
-    plt.figure(figsize=(6,6))
-    wedges, texts, autotexts = plt.pie(name_income_type.values, 
-            labels=name_income_type.index, 
-            startangle=90, 
-            counterclock=False,
-            wedgeprops=dict(width=0.4, edgecolor='w'),
-            autopct='%1.1f%%',           
-            pctdistance=0.75)
-    plt.title('Applicant\'s Income Source')
-    plt.legend(wedges, name_income_type.index, title='Income Source',
-           loc='center left', bbox_to_anchor=(1.0, 0.5))
-    plt.close()
-    plt.savefig('exploratory_data_analysis/income_source_donut.png', bbox_inches='tight', dpi=300)
-    print(f"Saved static donut to 'exploratory_data_analysis/income_source_donut.png'")
-    print(80*'=')
+    # # NAME_INCOME_TYPE donut chart
+    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S INCOME SOURCE (NAME_INCOME_TYPE COLUMN)================")
+    # name_income_type = train_data["NAME_INCOME_TYPE"].value_counts()
+    # plt.figure(figsize=(6,6))
+    # wedges, texts, autotexts = plt.pie(name_income_type.values, 
+    #         labels=name_income_type.index, 
+    #         startangle=90, 
+    #         counterclock=False,
+    #         wedgeprops=dict(width=0.4, edgecolor='w'),
+    #         autopct='%1.1f%%',           
+    #         pctdistance=0.75)
+    # plt.title('Applicant\'s Income Source')
+    # plt.legend(wedges, name_income_type.index, title='Income Source',
+    #        loc='center left', bbox_to_anchor=(1.0, 0.5))
+    # plt.close()
+    # plt.savefig('exploratory_data_analysis/income_source_donut.png', bbox_inches='tight', dpi=300)
+    # print(f"Saved static donut to 'exploratory_data_analysis/income_source_donut.png'")
+    # print(80*'=')
     
-    # NAME_INCOME_TYPE distribution grouped by TARGET
-    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S INCOME SOURCE (NAME_INCOME_TYPE COLUMN) GROUPED BY TARGET================")
-    plt.figure(figsize=(12, 6))
-    sns.countplot(data=train_data, x="NAME_INCOME_TYPE", hue="TARGET")
-    plt.title("Distribution of Applicant's Income Source by Target")
-    plt.xlabel("Income Source")
-    plt.ylabel("Count")
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig('exploratory_data_analysis/income_source_by_target.png', bbox_inches='tight', dpi=300)
-    plt.close()
-    print(80*'=')
+    # # NAME_INCOME_TYPE distribution grouped by TARGET
+    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S INCOME SOURCE (NAME_INCOME_TYPE COLUMN) GROUPED BY TARGET================")
+    # plt.figure(figsize=(12, 6))
+    # sns.countplot(data=train_data, x="NAME_INCOME_TYPE", hue="TARGET")
+    # plt.title("Distribution of Applicant's Income Source by Target")
+    # plt.xlabel("Income Source")
+    # plt.ylabel("Count")
+    # plt.xticks(rotation=45, ha='right')
+    # plt.tight_layout()
+    # plt.savefig('exploratory_data_analysis/income_source_by_target.png', bbox_inches='tight', dpi=300)
+    # plt.close()
+    # print(80*'=')
 
-    # OCCUPATION_TYPE distribution plot
-    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S OCCUPATION (OCCUPATION_TYPE COLUMN)================")
-    # counts-only bar chart (dropna by default)
-    occupation_type = train_data["OCCUPATION_TYPE"].value_counts()
-    plt.figure(figsize=(10, 6))
-    bars = plt.bar(occupation_type.index, occupation_type.values, color='green', edgecolor='k')
-    plt.title("Occupation of Applicants who applied for loan")
-    plt.xlabel("Occupation")
-    plt.ylabel("Count")
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
+    # # OCCUPATION_TYPE distribution plot
+    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S OCCUPATION (OCCUPATION_TYPE COLUMN)================")
+    # # counts-only bar chart (dropna by default)
+    # occupation_type = train_data["OCCUPATION_TYPE"].value_counts()
+    # plt.figure(figsize=(10, 6))
+    # bars = plt.bar(occupation_type.index, occupation_type.values, color='green', edgecolor='k')
+    # plt.title("Occupation of Applicants who applied for loan")
+    # plt.xlabel("Occupation")
+    # plt.ylabel("Count")
+    # plt.xticks(rotation=45, ha='right')
+    # plt.tight_layout()
 
-    # annotate counts above bars
-    for b in bars:
-        h = b.get_height()
-        plt.text(b.get_x() + b.get_width() / 2, h + max(1, occupation_type.values.max()*0.01), f'{int(h)}',
-                ha='center', va='bottom', fontsize=9)
+    # # annotate counts above bars
+    # for b in bars:
+    #     h = b.get_height()
+    #     plt.text(b.get_x() + b.get_width() / 2, h + max(1, occupation_type.values.max()*0.01), f'{int(h)}',
+    #             ha='center', va='bottom', fontsize=9)
 
-    plt.savefig('exploratory_data_analysis/occupation_type_bar_chart.png', dpi=300, bbox_inches='tight')
-    print(f"Saved static bar chart to 'exploratory_data_analysis/occupation_type_bar_chart.png'")
-    plt.close()
+    # plt.savefig('exploratory_data_analysis/occupation_type_bar_chart.png', dpi=300, bbox_inches='tight')
+    # print(f"Saved static bar chart to 'exploratory_data_analysis/occupation_type_bar_chart.png'")
+    # plt.close()
 
-    # OCCUPATION_TYPE distribution plot grouped by TARGET
-    print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S OCCUPATION (OCCUPATION_TYPE COLUMN) GROUPED BY TARGET================")
-    plt.figure(figsize=(12, 6))
-    sns.countplot(data=train_data, x="OCCUPATION_TYPE", hue="TARGET")
-    plt.title("Distribution of Applicant's Occupation by Target")
-    plt.xlabel("Occupation")
-    plt.ylabel("Count")
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig('exploratory_data_analysis/occupation_type_by_target.png', bbox_inches='tight', dpi=300)
-    plt.close()
-    print(80*'=')
+    # # OCCUPATION_TYPE distribution plot grouped by TARGET
+    # print("================EXAMINING THE DISTRIBUTION OF APPLICANT'S OCCUPATION (OCCUPATION_TYPE COLUMN) GROUPED BY TARGET================")
+    # plt.figure(figsize=(12, 6))
+    # sns.countplot(data=train_data, x="OCCUPATION_TYPE", hue="TARGET")
+    # plt.title("Distribution of Applicant's Occupation by Target")
+    # plt.xlabel("Occupation")
+    # plt.ylabel("Count")
+    # plt.xticks(rotation=45, ha='right')
+    # plt.tight_layout()
+    # plt.savefig('exploratory_data_analysis/occupation_type_by_target.png', bbox_inches='tight', dpi=300)
+    # plt.close()
+    # print(80*'=')
 
-    # ORGANIZATION_TYPE distribution plot
-    print("================EXAMINING THE DISTRIBUTION OF THE ORGANIZATION THE APPLICANT'S WORKS (ORGANIZATION_TYPE COLUMN)================")
-    organization_type = train_data["ORGANIZATION_TYPE"].value_counts(dropna=False)
-    total = int(organization_type.sum())
+    # # ORGANIZATION_TYPE distribution plot
+    # print("================EXAMINING THE DISTRIBUTION OF THE ORGANIZATION THE APPLICANT'S WORKS (ORGANIZATION_TYPE COLUMN)================")
+    # organization_type = train_data["ORGANIZATION_TYPE"].value_counts(dropna=False)
+    # total = int(organization_type.sum())
 
-    labels = organization_type.index.astype(str)
-    counts = organization_type.values
+    # labels = organization_type.index.astype(str)
+    # counts = organization_type.values
 
-    fig, ax = plt.subplots(figsize=(12, 10))
-    y_pos = np.arange(len(labels))
+    # fig, ax = plt.subplots(figsize=(12, 10))
+    # y_pos = np.arange(len(labels))
 
-    # horizontal bars (easier to read long labels)
-    bars = ax.barh(y_pos, counts, color='green', edgecolor='k', height=0.5)
+    # # horizontal bars (easier to read long labels)
+    # bars = ax.barh(y_pos, counts, color='green', edgecolor='k', height=0.5)
 
-    # invert so largest is on top
-    ax.invert_yaxis()
+    # # invert so largest is on top
+    # ax.invert_yaxis()
 
-    # label formatting
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(labels, fontsize=9)
-    ax.set_xlabel('Count', fontsize=12)
-    ax.set_title("Organization of Applicants who applied for loan", fontsize=14)
+    # # label formatting
+    # ax.set_yticks(y_pos)
+    # ax.set_yticklabels(labels, fontsize=9)
+    # ax.set_xlabel('Count', fontsize=12)
+    # ax.set_title("Organization of Applicants who applied for loan", fontsize=14)
 
-    # thousands separator on x-axis
-    ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, p: format(int(x), ',')))
+    # # thousands separator on x-axis
+    # ax.xaxis.set_major_formatter(mtick.FuncFormatter(lambda x, p: format(int(x), ',')))
 
-    # annotate counts and percentages just outside the bars
-    max_count = counts.max() if len(counts) else 1
-    pad = max_count * 0.01
-    for i, v in enumerate(counts):
-        pct = v / total * 100.0 if total else 0.0
-        ax.text(v + pad, i, f'{v:,}  ({pct:.1f}%)', va='center', fontsize=8)
+    # # annotate counts and percentages just outside the bars
+    # max_count = counts.max() if len(counts) else 1
+    # pad = max_count * 0.01
+    # for i, v in enumerate(counts):
+    #     pct = v / total * 100.0 if total else 0.0
+    #     ax.text(v + pad, i, f'{v:,}  ({pct:.1f}%)', va='center', fontsize=8)
 
-    plt.tight_layout()
-    plt.savefig('exploratory_data_analysis/organization_type_bar_chart.png', dpi=300, bbox_inches='tight')
-    print(f"Saved static bar chart to 'exploratory_data_analysis/organization_type_bar_chart.png'")
-    plt.close()
+    # plt.tight_layout()
+    # plt.savefig('exploratory_data_analysis/organization_type_bar_chart.png', dpi=300, bbox_inches='tight')
+    # print(f"Saved static bar chart to 'exploratory_data_analysis/organization_type_bar_chart.png'")
+    # plt.close()
 
-    # ORGANIZATION_TYPE distribution plot grouped by TARGET
-    print("================EXAMINING THE DISTRIBUTION OF THE ORGANIZATION THE APPLICANT'S WORKS (ORGANIZATION_TYPE COLUMN) GROUPED BY TARGET================")
-    plt.figure(figsize=(12, 6))
-    sns.countplot(data=train_data, x="ORGANIZATION_TYPE", hue="TARGET")
-    plt.title("Distribution of Organization Type by Target")
-    plt.xlabel("Organization Type")
-    plt.ylabel("Count")
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    plt.savefig('exploratory_data_analysis/organization_type_by_target.png', bbox_inches='tight', dpi=300)
-    plt.close()
-    print(80*'=')
+    # # ORGANIZATION_TYPE distribution plot grouped by TARGET
+    # print("================EXAMINING THE DISTRIBUTION OF THE ORGANIZATION THE APPLICANT'S WORKS (ORGANIZATION_TYPE COLUMN) GROUPED BY TARGET================")
+    # plt.figure(figsize=(12, 6))
+    # sns.countplot(data=train_data, x="ORGANIZATION_TYPE", hue="TARGET")
+    # plt.title("Distribution of Organization Type by Target")
+    # plt.xlabel("Organization Type")
+    # plt.ylabel("Count")
+    # plt.xticks(rotation=45, ha='right')
+    # plt.tight_layout()
+    # plt.savefig('exploratory_data_analysis/organization_type_by_target.png', bbox_inches='tight', dpi=300)
+    # plt.close()
+    # print(80*'=')
 
     return train_data, test_data
 
-def missing_values(df):
+def missing_values(df, output_folder):
         # Total missing values
         mis_val = df.isnull().sum()
         
@@ -331,13 +342,13 @@ def missing_values(df):
             mis_val_table_ren_columns.iloc[:,1] != 0].sort_values(
         '% of Total Values', ascending=False).round(1)
         
-        # Print some summary information
+        # Print summary information
         print ("There are " + str(mis_val_table_ren_columns.shape[0]) + " columns that have missing values.")
         print(80*'=')
 
         # Save the missing values table to a CSV file
-        print("Saving missing values table to 'exploratory_data_analysis/missing_values_table.csv'")
-        mis_val_table_ren_columns.to_csv('exploratory_data_analysis/missing_values_table.csv')
+        print(f"Saving missing values table to '{output_folder}/missing_values_table.csv'")
+        mis_val_table_ren_columns.to_csv(f'{output_folder}/missing_values_table.csv')
 
         print("First 20 rows of missing values table:")
         print(mis_val_table_ren_columns.head(20))
@@ -354,14 +365,14 @@ def obj_encoding(data):
 
     return data, categorical_features
 
-def get_features_distribution(train_data, categorical_features, seed=None):
+def get_features_distribution(train_data, categorical_features, output_folder, seed=None):
     # ================================ ACTUAL IMPORTANCE DISTRIBUTION (without shuffling) ================================
     np.random.seed(123) # Seed the unexpected randomness of this world
 
     actual_imp_df = features_importance(train_data, shuffle=False, cat_cols=categorical_features)
 
     print("Saving actual feature importances to 'exploratory_data_analysis/actual_feature_importances.csv'")
-    actual_imp_df.to_csv('exploratory_data_analysis/actual_feature_importances.csv', index=False)
+    actual_imp_df.to_csv(os.path.join(output_folder, 'actual_feature_importances.csv'), index=False)
     
     print("First 5 rows of actual (non-shuffled) feature importances:")
     print(actual_imp_df.head())
@@ -434,7 +445,7 @@ def get_features_distribution(train_data, categorical_features, seed=None):
     
     print("\n")
     print("Saving null feature importances distribution to 'exploratory_data_analysis/null_importances_distribution.csv'")
-    imp_df.to_csv('exploratory_data_analysis/null_importances_distribution.csv', index=False)
+    imp_df.to_csv(os.path.join(output_folder, 'null_importances_distribution.csv'), index=False)
 
     print("First 5 rows of shuffled feature importances:")
     print(imp_df.head())
@@ -484,7 +495,7 @@ def features_importance(data, shuffle, cat_cols, seed=None):
     
     return imp_df
 
-def display_distributions(actual_imp_df, null_imp_df, feature):
+def display_distributions(actual_imp_df, null_imp_df, output_folder, feature):
     plt.figure(figsize=(13, 6))
     gs = gridspec.GridSpec(1, 2)
     # Plot Split importances
@@ -503,10 +514,12 @@ def display_distributions(actual_imp_df, null_imp_df, feature):
     ax.legend()
     ax.set_title('Gain Importance of %s' % feature.upper(), fontweight='bold')
     plt.xlabel('Null Importance (gain) Distribution for %s ' % feature.upper())
+    plt.savefig(os.path.join(output_folder, f'{feature}_importance_distributions.png'), bbox_inches='tight', dpi=300)
+    plt.close()
     
     return 
 
-def features_scores(actual_imp_df, null_imp_df):
+def features_scores(actual_imp_df, null_imp_df, output_folder):
     feature_scores = []
 
     for _f in actual_imp_df['feature'].unique():
@@ -524,7 +537,7 @@ def features_scores(actual_imp_df, null_imp_df):
 
     scores_df = pd.DataFrame(feature_scores, columns=['feature', 'split_score', 'gain_score'])
     print("Saving feature scores to 'exploratory_data_analysis/feature_scores.csv'")
-    scores_df.to_csv('exploratory_data_analysis/feature_scores.csv', index=False)
+    scores_df.to_csv(os.path.join(output_folder, 'feature_scores.csv'), index=False)
 
     plt.figure(figsize=(16, 16))
     gs = gridspec.GridSpec(1, 2)
@@ -538,12 +551,12 @@ def features_scores(actual_imp_df, null_imp_df):
     ax.set_title('Feature scores wrt gain importances', fontweight='bold', fontsize=14)
     plt.tight_layout()
     print("Saving feature scores plot to 'exploratory_data_analysis/feature_scores.png'")
-    plt.savefig('exploratory_data_analysis/feature_scores.png', bbox_inches='tight', dpi=300)
+    plt.savefig(os.path.join(output_folder, 'feature_scores.png'), bbox_inches='tight', dpi=300)
     plt.close()
 
     return scores_df
 
-def correlation_scores(actual_imp_df, null_imp_df):
+def correlation_scores(actual_imp_df, null_imp_df, output_folder):
     correlation_scores = []
 
     for _f in actual_imp_df['feature'].unique():
@@ -575,7 +588,7 @@ def correlation_scores(actual_imp_df, null_imp_df):
     plt.suptitle("Features' split and gain scores", fontweight='bold', fontsize=16)
     fig.subplots_adjust(top=0.93)
     print("Saving feature scores plot to 'exploratory_data_analysis/correlation_scores.png'")
-    plt.savefig('exploratory_data_analysis/correlation_scores.png', bbox_inches='tight', dpi=300)
+    plt.savefig(os.path.join(output_folder, 'correlation_scores.png'), bbox_inches='tight', dpi=300)
     plt.close()
 
     return correlation_scores
@@ -690,24 +703,20 @@ def objects_encoding(train_data, test_data):
 
     return train_data, test_data
 
-def description_analysis(train_data):
+def description_analysis(train_data, output_folder):
     # Compute describe() on numeric-only data and save
     numeric_df = train_data.select_dtypes(include=[np.number])
     desc_df = numeric_df.describe().round(6)
     print("First 5 rows of data description analysis (numeric columns):")
     print(desc_df.head())
     print(80*'=')
-    print("Saving data description analysis to 'exploratory_data_analysis/application_train_desc.csv'")
-    desc_df.to_csv('exploratory_data_analysis/application_train_desc.csv')
+    print(f"Saving data description analysis to '{output_folder}/application_train_desc.csv'")
+    desc_df.to_csv(f'{output_folder}/application_train_desc.csv')
     print(80*'=')
 
     # Prepare analysis file and header
-    analysis_file = 'exploratory_data_analysis/desc_analysis.csv'
     cols = ['statistic'] + list(desc_df.columns)
-    if not os.path.exists('exploratory_data_analysis'):
-        os.makedirs('exploratory_data_analysis')
-    if not os.path.exists(analysis_file):
-        pd.DataFrame(columns=cols).to_csv(analysis_file, index=False)
+    analysis_file = pd.DataFrame(columns=cols).to_csv(f'{output_folder}/desc_analysis.csv', index=False)
 
     # Convert describe output to a dataframe with 'statistic' column and a lookup index
     desc_analysis_df = desc_df.reset_index().rename(columns={'index': 'statistic'})
@@ -824,7 +833,7 @@ def description_analysis(train_data):
 
 def anomalies_handling(train_data, test_data):
     """
-    From data's description i found anomaly in DAYS_EMPLOYED column
+    From data's description I found anomaly in DAYS_EMPLOYED column
     """
 
     # Display statistics for DAYS_EMPLOYED
@@ -860,7 +869,7 @@ def anomalies_handling(train_data, test_data):
 
     return 
 
-def data_correlations(train_data, desc_df):
+def data_correlations(data, output_folder, desc_data=None):
     """
     Interpretations of the absolute value of the correlation coefficent are:
     .00-.19 “very weak”
@@ -870,11 +879,11 @@ def data_correlations(train_data, desc_df):
     .80-1.0 “very strong”
     """
     print(80*'=')
-    print(f"Working with {len(train_data.columns)} numeric columns (including TARGET)")
+    print(f"Working with {len(data.columns)} numeric columns (including TARGET)")
     print(80*'=')
 
     # Calculate full correlation matrix
-    corr_matrix = train_data.corr()
+    corr_matrix = data.corr()
 
     # Extract unique pairwise correlations (upper triangle) and sort
     upper_tri = np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
@@ -891,78 +900,79 @@ def data_correlations(train_data, desc_df):
     threshold = 0.60
     high_pairs = pairs_df[pairs_df['correlation'] > threshold].copy()
     high_pairs = high_pairs.sort_values(by='correlation', key=lambda s: s.abs(), ascending=False)
-    high_pairs.to_csv(os.path.join('exploratory_data_analysis', 'most_positive_correlation_pairs.csv'), index=False)
+    high_pairs.to_csv(os.path.join(output_folder, 'most_positive_correlation_pairs.csv'), index=False)
 
     # Find most negative correlation pairs (correlation < -0.60)
     low_pairs = pairs_df[pairs_df['correlation'] < -threshold].copy()
     low_pairs = low_pairs.sort_values(by='correlation', key=lambda s: s.abs(), ascending=False)
-    low_pairs.to_csv(os.path.join('exploratory_data_analysis', 'most_negative_correlation_pairs.csv'), index=False)
+    low_pairs.to_csv(os.path.join(output_folder, 'most_negative_correlation_pairs.csv'), index=False)
 
     # Display summary
     print(80*'=')
-    print(f"Saved most_positive_correlation_pairs and most_negative_correlation_pairs |corr|>{threshold}).")
+    print(f"Saved most_positive_correlation_pairs and most_negative_correlation_pairs (|corr|>{threshold}).")
     print('Most Positive Correlations:\n', high_pairs.head(15))
     print('\nMost Negative Correlations:\n', low_pairs.head(15))
     print(80*'=')
 
     # Find correlations with the target and sort
-    target_corr = train_data.corr()['TARGET'].sort_values()
+    target_corr = data.corr()['TARGET'].sort_values()
 
     # Save full correlation matrix as CSV
     print(80*'=')
     print("Saving correlation to TARGET matrix to 'exploratory_data_analysis")
-    target_corr.to_csv(os.path.join("exploratory_data_analysis", "target_correlation_matrix.csv"))
+    target_corr.to_csv(os.path.join(output_folder, "target_correlation_matrix.csv"))
     print(80*'=')
     
     # Display correlations to target
     print(80*'=')
-    print('Most Positive Correlations:\n', target_corr.tail(15))
-    print('\nMost Negative Correlations:\n', target_corr.head(15))
+    print('Most Positive Correlations to TARGET:\n', target_corr.dropna().tail(15))
+    print('\nMost Negative Correlations to TARGET:\n', target_corr.dropna().head(15))
     print(80*'=')
 
     # Correlation heatmap of statistics
-    # Accept either a describe() DataFrame (stats in the index) or an analysis DataFrame
-    if 'statistic' not in desc_df.columns:
-        stats_df = desc_df.reset_index().rename(columns={'index': 'statistic'})
-    else:
-        stats_df = desc_df.copy()
+    if desc_data is not None:
+        # Accept either a describe() DataFrame (stats in the index) or an analysis DataFrame
+        if 'statistic' not in desc_data.columns:
+            stats_df = desc_data.reset_index().rename(columns={'index': 'statistic'})
+        else:
+            stats_df = desc_data.copy()
 
-    # Set 'statistic' as the index for selection
-    stats_df = stats_df.set_index('statistic')
+        # Set 'statistic' as the index for selection
+        stats_df = stats_df.set_index('statistic')
 
-    # Select only the common statistic rows that exist
-    wanted = ['mean', 'std', 'min', '25%', '50%', '75%', 'max']
-    existing = [r for r in wanted if r in stats_df.index]
-    if not existing:
-        print('No descriptive statistic rows found to compute statistic correlations.')
-        correlation_between_stats = pd.DataFrame()
-    else:
-        selected = stats_df.loc[existing]
-        correlation_between_stats = selected.T.corr()
+        # Select only the common statistic rows that exist
+        wanted = ['mean', 'std', 'min', '25%', '50%', '75%', 'max']
+        existing = [r for r in wanted if r in stats_df.index]
+        if not existing:
+            print('No descriptive statistic rows found to compute statistic correlations.')
+            correlation_between_stats = pd.DataFrame()
+        else:
+            selected = stats_df.loc[existing]
+            correlation_between_stats = selected.T.corr()
 
-    # Save statistics correlation csv
-    correlation_between_stats.to_csv(os.path.join("exploratory_data_analysis", "statistics_correlation_matrix.csv"))
-    # Create heatmap
-    plt.figure(figsize=(12, 10))
-    sns.heatmap(correlation_between_stats, 
-                annot=True,
-                cmap='coolwarm',
-                fmt='.2f',
-                square=True,
-                linewidths=0.5)
+        # Save statistics correlation csv
+        correlation_between_stats.to_csv(os.path.join("exploratory_data_analysis", "statistics_correlation_matrix.csv"))
+        # Create heatmap
+        plt.figure(figsize=(12, 10))
+        sns.heatmap(correlation_between_stats, 
+                    annot=True,
+                    cmap='coolwarm',
+                    fmt='.2f',
+                    square=True,
+                    linewidths=0.5)
 
-    plt.title(f'Correlation Heatmap of Statistics')
-    plt.xticks(rotation=45, ha='right')
-    plt.yticks(rotation=0)
+        plt.title(f'Correlation Heatmap of Statistics')
+        plt.xticks(rotation=45, ha='right')
+        plt.yticks(rotation=0)
 
-    # Save the plot
-    output_path = f'exploratory_data_analysis/statistics_correlation_heatmap.png'
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()
+        # Save the plot
+        output_path = f'exploratory_data_analysis/statistics_correlation_heatmap.png'
+        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+        plt.close()
     
     return 
 
-def corr_exam(train_data):
+def corr_exam(train_data, output_folder):
     """
     Examing the variables with the with the strongest 
     possitve correlation (DAYS_BIRTH) 
@@ -981,7 +991,7 @@ def corr_exam(train_data):
     plt.figure(figsize=(8, 5))
     plt.hist(train_data['DAYS_BIRTH'] / 365, edgecolor='k', bins=25)
     plt.title('Age of Client'); plt.xlabel('Age (years)'); plt.ylabel('Count')
-    plt.savefig('exploratory_data_analysis/age_distribution.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'{output_folder}/age_distribution.png', bbox_inches='tight', dpi=300)
     plt.close()
 
     # Prepare age dataframe once, create YEARS_BINNED, then group
@@ -998,7 +1008,7 @@ def corr_exam(train_data):
     plt.xticks(rotation=75); plt.xlabel('Age Group (years)'); plt.ylabel('Failure to Repay (%)')
     plt.title('Failure to Repay by Age Group')
     plt.tight_layout()
-    plt.savefig('exploratory_data_analysis/failure_by_age_group.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'{output_folder}/failure_by_age_group.png', bbox_inches='tight', dpi=300)
     plt.close()
 
     # Extract the EXT_SOURCE variables and show correlations
@@ -1011,7 +1021,7 @@ def corr_exam(train_data):
     # Heatmap of correlations
     sns.heatmap(ext_data_corrs, cmap = plt.cm.RdYlBu_r, vmin = -0.25, annot = True, vmax = 0.6)
     plt.title('Correlation Heatmap')
-    plt.savefig('exploratory_data_analysis/ext_source_correlation_heatmap.png', bbox_inches='tight', dpi=300)  
+    plt.savefig(f'{output_folder}/ext_source_correlation_heatmap.png', bbox_inches='tight', dpi=300)  
     plt.close()
     
     # Display the distribution of each of these features colored by the value of the target
@@ -1029,16 +1039,147 @@ def corr_exam(train_data):
         
         # Label the plots
         plt.title('Distribution of %s by Target Value' % source)
-        plt.xlabel('%s' % source); plt.ylabel('Density');
+        plt.xlabel('%s' % source); plt.ylabel('Density')
         
     plt.tight_layout(h_pad = 2.5)
-    plt.savefig('exploratory_data_analysis/ext_source_distribution_by_target.png', bbox_inches='tight', dpi=300)
+    plt.savefig(f'{output_folder}/ext_source_distribution_by_target.png', bbox_inches='tight', dpi=300)
     plt.close()
 
     return 
 
+def model(features, test_features, categorical_features, output_folder, n_folds = 5):
+    
+    """Train and test a light gradient boosting model using
+    cross validation. 
+    
+    Parameters
+    --------
+        features (pd.DataFrame): 
+            dataframe of training features to use 
+            for training a model. Must include the TARGET column.
+        test_features (pd.DataFrame): 
+            dataframe of testing features to use
+            for making predictions with the model. 
+        n_folds (int, default = 5): 
+            number of folds to use for cross validation
+        
+    Return
+    --------
+        submission (pd.DataFrame): 
+            dataframe with `SK_ID_CURR` and `TARGET` probabilities
+            predicted by the model.
+        feature_importances (pd.DataFrame): 
+            dataframe with the feature importances from the model.
+        valid_metrics (pd.DataFrame): 
+            dataframe with training and validation metrics (ROC AUC) for each fold and overall.
+        
+    """
+    
+    # Extract the ids
+    train_ids = features['SK_ID_CURR']
+    test_ids = test_features['SK_ID_CURR']
+    
+    # Extract the labels for training
+    labels = features['TARGET']
+    
+    # Remove the ids and target
+    features = features.drop(columns = ['SK_ID_CURR', 'TARGET'])
+    test_features = test_features.drop(columns = ['SK_ID_CURR'])
+        
+    print('Training Data Shape: ', features.shape)
+    print('Testing Data Shape: ', test_features.shape)
+    
+    # Extract feature names
+    feature_names = list(features.columns)
+    
+    # Convert to np arrays
+    features = np.array(features)
+    test_features = np.array(test_features)
+    
+    # Create the kfold object
+    k_fold = KFold(n_splits = n_folds, shuffle = True, random_state = 50)
+    
+    # Empty array for test predictions
+    test_predictions = np.zeros(test_features.shape[0])
+    
+    # Empty array for out of fold validation predictions
+    out_of_fold = np.zeros(features.shape[0])
+    
+    # Lists for recording validation and training scores
+    valid_scores = []
+    train_scores = []
+    
+    # Iterate through each fold
+    for train_indices, valid_indices in k_fold.split(features):
+        
+        # Training data for the fold
+        train_features, train_labels = features[train_indices], labels[train_indices]
+        # Validation data for the fold
+        valid_features, valid_labels = features[valid_indices], labels[valid_indices]
+        
+        # Create the model
+        model = lgb.LGBMClassifier(n_estimators=10000, objective = 'binary', 
+                                   class_weight = 'balanced', learning_rate = 0.05, 
+                                   reg_alpha = 0.1, reg_lambda = 0.1, 
+                                   subsample = 0.8, n_jobs = -1, random_state = 50)
+        
+        # Train the model
+        model.fit(train_features, train_labels, eval_metric = 'auc',
+                  eval_set = [(valid_features, valid_labels), (train_features, train_labels)],
+                  eval_names = ['valid', 'train'], categorical_feature = categorical_features,
+                  early_stopping_rounds = 100, verbose = 200)
+        
+        # Record the best iteration
+        best_iteration = model.best_iteration_
+        
+        # Make predictions
+        test_predictions += model.predict_proba(test_features, num_iteration = best_iteration)[:, 1] / k_fold.n_splits
+        
+        # Record the out of fold predictions
+        out_of_fold[valid_indices] = model.predict_proba(valid_features, num_iteration = best_iteration)[:, 1]
+        
+        # Record the best score
+        valid_score = model.best_score_['valid']['auc']
+        train_score = model.best_score_['train']['auc']
+        
+        valid_scores.append(valid_score)
+        train_scores.append(train_score)
+        
+        # Clean up memory
+        gc.enable()
+        del model, train_features, valid_features
+        gc.collect()
+        
+    # Make the submission dataframe
+    test_pred = pd.DataFrame({'SK_ID_CURR': test_ids, 'TARGET': test_predictions})
+
+    # Save the submission dataframe
+    print("Saving submission to 'lgbm_baseline_submission.csv'")
+    test_pred.to_csv(f'{output_folder}/lgbm_baseline_submission.csv', index = False)
+    
+    # Overall validation score
+    valid_auc = roc_auc_score(labels, out_of_fold)
+    
+    # Add the overall scores to the metrics
+    valid_scores.append(valid_auc)
+    train_scores.append(np.mean(train_scores))
+    
+    # Needed for creating dataframe of validation scores
+    fold_names = list(range(n_folds))
+    fold_names.append('overall')
+    
+    # Dataframe of validation scores
+    metrics = pd.DataFrame({'fold': fold_names,
+                            'train': train_scores,
+                            'valid': valid_scores}) 
+    # Save the validation scores
+    print("Saving validation scores to 'lgbm_baseline_validation_scores.csv'")
+    metrics.to_csv(f'{output_folder}/lgbm_baseline_validation_scores.csv', index = False)
+    
+    return
 
 def main():
+    output_folder = create_folder()
     # List files available
     # print(os.listdir("data/"))
 
@@ -1048,21 +1189,35 @@ def main():
     print(80*'=')
     train_data, test_data = load_and_preview_data() # Load and preview data
 
-    # print("============================EXAMINING MISSING VALUES=============================")
-    # missing_values(train_data)
+    print("============================EXAMINING MISSING VALUES=============================")
+    missing_values(train_data, output_folder)
 
-    # print("============================LABEL ENCODING AND ONE-HOT ENCODING=============================")
+    print("============================LABEL ENCODING AND ONE-HOT ENCODING=============================")
     # train_data_en, test_data_en = objects_encoding(train_data, test_data)
     train_data, categorical_features = obj_encoding(train_data)
-    test_data, _ = obj_encoding(test_data)
+    # test_data, _ = obj_encoding(test_data)
+
+    print("============================DATA DESCRIPTION AND ANALYSIS=============================")
+    desc_df = description_analysis(train_data, output_folder)
+
+    print("=====================================HANDLING ANOMALIES======================================")
+    anomalies_handling(train_data, test_data)
+
+    print("=====================================CORRELATIONS======================================")
+    data_correlations(train_data, output_folder, desc_df)
+
+    print("=====================================EXAMING CORRELATIONS======================================")
+    corr_exam(train_data, output_folder)
 
     # ==========================================FEATURE IMPORTANCE==========================================
-    actual_imp_df, null_imp_df = get_features_distribution(train_data, categorical_features)
-    display_distributions(actual_imp_df, null_imp_df, feature='LIVINGAPARTMENTS_AVG')
-    display_distributions(actual_imp_df, null_imp_df, feature='CODE_GENDER')
+    actual_imp_df, null_imp_df = get_features_distribution(train_data, categorical_features, output_folder)
+    
+    # distribution examples of two features
+    display_distributions(actual_imp_df, null_imp_df, output_folder, feature='LIVINGAPARTMENTS_AVG')
+    display_distributions(actual_imp_df, null_imp_df, output_folder, feature='CODE_GENDER')
 
-    features_scores(actual_imp_df, null_imp_df)
-    corr_scores = correlation_scores(actual_imp_df, null_imp_df)
+    features_scores(actual_imp_df, null_imp_df, output_folder)
+    corr_scores = correlation_scores(actual_imp_df, null_imp_df, output_folder)
 
     percentage_scores = [0, 10, 20, 30 , 40, 50 ,60 , 70, 80 , 90, 95, 99]
     for threshold in percentage_scores:
@@ -1076,20 +1231,6 @@ def main():
         print('\t SPLIT : %.6f +/- %.6f' % (split_results[0], split_results[1]))
         gain_results = score_feature_selection(df=train_data, train_features=gain_feats, cat_cols=gain_cat_feats, target=train_data['TARGET'])
         print('\t GAIN  : %.6f +/- %.6f' % (gain_results[0], gain_results[1]))
-
-    print("============================DATA DESCRIPTION AND ANALYSIS=============================")
-    desc_df = description_analysis(train_data)
-
-    print("=====================================HANDLING ANOMALIES======================================")
-    anomalies_handling(train_data, test_data)
-
-    print("=====================================CORRELATIONS======================================")
-    data_correlations(train_data, desc_df)
-
-    print("=====================================EXAMING CORRELATIONS======================================")
-    corr_exam(train_data)
-
-    # ==========================================FEATURE ENGINEERING==========================================
 
 
 if __name__ == "__main__":
