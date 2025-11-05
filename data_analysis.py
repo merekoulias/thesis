@@ -23,7 +23,7 @@ from plotly.offline import iplot
 # Matplotlib ticker for better axis formatting
 import matplotlib.ticker as mtick
 
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, average_precision_score, roc_curve, precision_recall_curve
 from sklearn.model_selection import KFold
 import time
 from lightgbm import LGBMClassifier
@@ -468,8 +468,11 @@ def features_importance(data, shuffle, cat_cols, seed=None):
     if shuffle:
         y = data['TARGET'].copy().sample(frac=1.0)
     
+    # Filter categorical features to only those that exist in train_features
+    valid_cat_cols = [c for c in cat_cols if c in train_features]
+    
     # Pass categorical features to the Dataset object
-    dtrain = lgb.Dataset(data[train_features], y, free_raw_data=False, categorical_feature=cat_cols)
+    dtrain = lgb.Dataset(data[train_features], y, free_raw_data=False, categorical_feature=valid_cat_cols)
     lgb_params = {
         'objective': 'binary',
         'verbosity': -1,
@@ -519,8 +522,8 @@ def display_distributions(actual_imp_df, null_imp_df, output_folder, feature):
     
     return 
 
-def features_scores(actual_imp_df, null_imp_df, output_folder):
-    feature_scores = []
+def log_ratio_importances(actual_imp_df, null_imp_df, output_folder):
+    ratio_scores = []
 
     for _f in actual_imp_df['feature'].unique():
         f_null_imps_gain = null_imp_df.loc[null_imp_df['feature'] == _f, 'importance_gain'].values
@@ -533,11 +536,11 @@ def features_scores(actual_imp_df, null_imp_df, output_folder):
 
         split_score = np.log(1e-10 + f_act_imps_split / (1 + np.percentile(f_null_imps_split, 75)))  # Avoid didvide by zero
 
-        feature_scores.append((_f, split_score, gain_score))
+        ratio_scores.append((_f, split_score, gain_score))
 
-    scores_df = pd.DataFrame(feature_scores, columns=['feature', 'split_score', 'gain_score'])
-    print("Saving feature scores to 'exploratory_data_analysis/feature_scores.csv'")
-    scores_df.to_csv(os.path.join(output_folder, 'feature_scores.csv'), index=False)
+    scores_df = pd.DataFrame(ratio_scores, columns=['feature', 'split_score', 'gain_score'])
+    print("Saving feature scores to 'exploratory_data_analysis/ratio_scores.csv'")
+    scores_df.to_csv(os.path.join(output_folder, 'ratio_scores.csv'), index=False)
 
     plt.figure(figsize=(16, 16))
     gs = gridspec.GridSpec(1, 2)
@@ -550,14 +553,14 @@ def features_scores(actual_imp_df, null_imp_df, output_folder):
     sns.barplot(x='gain_score', y='feature', data=scores_df.sort_values('gain_score', ascending=False).iloc[0:70], ax=ax)
     ax.set_title('Feature scores wrt gain importances', fontweight='bold', fontsize=14)
     plt.tight_layout()
-    print(f'Saving feature scores plot to {output_folder}/feature_scores.png')
-    plt.savefig(os.path.join(output_folder, 'feature_scores.png'), bbox_inches='tight', dpi=300)
+    print(f'Saving feature scores plot to {output_folder}/ratio_scores.png')
+    plt.savefig(os.path.join(output_folder, 'ratio_scores.png'), bbox_inches='tight', dpi=300)
     plt.close()
 
     return scores_df
 
-def correlation_scores(actual_imp_df, null_imp_df, output_folder):
-    correlation_scores = []
+def percentile_importances(actual_imp_df, null_imp_df, output_folder):
+    percentile_scores = []
 
     for _f in actual_imp_df['feature'].unique():
         f_null_imps = null_imp_df.loc[null_imp_df['feature'] == _f, 'importance_gain'].values
@@ -570,30 +573,55 @@ def correlation_scores(actual_imp_df, null_imp_df, output_folder):
 
         split_score = 100 * (f_null_imps < np.percentile(f_act_imps, 25)).sum() / f_null_imps.size
 
-        correlation_scores.append((_f, split_score, gain_score))
+        percentile_scores.append((_f, split_score, gain_score))
 
-    corr_scores_df = pd.DataFrame(correlation_scores, columns=['feature', 'split_score', 'gain_score'])
+    percentile_scores_df = pd.DataFrame(percentile_scores, columns=['feature', 'split_score', 'gain_score'])
+    print("Saving correlation feature scores to 'exploratory_data_analysis/correlation_feature_scores.csv'")
+    percentile_scores_df.to_csv(os.path.join(output_folder, 'correlation_feature_scores.csv'), index=False)
 
     fig = plt.figure(figsize=(16, 16))
     gs = gridspec.GridSpec(1, 2)
     # Plot Split importances
     ax = plt.subplot(gs[0, 0])
-    sns.barplot(x='split_score', y='feature', data=corr_scores_df.sort_values('split_score', ascending=False).iloc[0:70], ax=ax)
+    sns.barplot(x='split_score', y='feature', data=percentile_scores_df.sort_values('split_score', ascending=False).iloc[0:70], ax=ax)
     ax.set_title('Feature scores wrt split importances', fontweight='bold', fontsize=14)
     # Plot Gain importances
     ax = plt.subplot(gs[0, 1])
-    sns.barplot(x='gain_score', y='feature', data=corr_scores_df.sort_values('gain_score', ascending=False).iloc[0:70], ax=ax)
+    sns.barplot(x='gain_score', y='feature', data=percentile_scores_df.sort_values('gain_score', ascending=False).iloc[0:70], ax=ax)
     ax.set_title('Feature scores wrt gain importances', fontweight='bold', fontsize=14)
     plt.tight_layout()
     plt.suptitle("Features' split and gain scores", fontweight='bold', fontsize=16)
     fig.subplots_adjust(top=0.93)
-    print(f'Saving feature scores plot to {output_folder}/correlation_scores.png')
-    plt.savefig(os.path.join(output_folder, 'correlation_scores.png'), bbox_inches='tight', dpi=300)
+    print(f'Saving feature scores plot to {output_folder}/percentile_scores.png')
+    plt.savefig(os.path.join(output_folder, 'percentile_scores.png'), bbox_inches='tight', dpi=300)
     plt.close()
 
-    return correlation_scores
+    return percentile_scores
 
-def score_feature_selection(df, train_features, cat_cols, target):
+def score_feature_selection(df, train_features, cat_cols, target, output_folder='exploratory_data_analysis', threshold=None):
+    """
+    Train a LightGBM model using k-fold cross-validation and compute ROC AUC and PR AUC metrics.
+    Includes both training and validation metrics to assess generalization (overfitting).
+    
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        Training data
+    train_features : list
+        List of feature names to use
+    cat_cols : list
+        List of categorical feature names
+    target : pd.Series
+        Target variable
+    output_folder : str
+        Folder to save metrics (default: 'exploratory_data_analysis')
+    threshold : int or None
+        Feature selection threshold (for filename)
+    
+    Returns:
+    --------
+    tuple : (roc_auc_mean, roc_auc_std)
+    """
     dtrain = lgb.Dataset(df[train_features], target, free_raw_data=False, categorical_feature=cat_cols)
 
     lgb_params = {
@@ -610,11 +638,11 @@ def score_feature_selection(df, train_features, cat_cols, target):
         'min_split_gain': .00001,
         'reg_alpha': .00001,
         'reg_lambda': .00001,
-        'metric': 'auc'
+        'metric': ['auc', 'average_precision']
     }
 
     # Use callbacks for early stopping
-    callbacks = [lgb.early_stopping(stopping_rounds=50, verbose=False)]
+    callbacks = [lgb.early_stopping(stopping_rounds=100, verbose=False)]
 
     hist = lgb.cv(
         params=lgb_params,
@@ -624,10 +652,43 @@ def score_feature_selection(df, train_features, cat_cols, target):
         stratified=True,
         shuffle=True,
         seed=17,
-        callbacks=callbacks
+        callbacks=callbacks,
+        return_cvbooster=True
     )
     
-    return hist['valid auc-mean'][-1], hist['valid auc-stdv'][-1]
+    # Extract validation metrics
+    valid_roc_auc_mean = hist['valid auc-mean'][-1]
+    valid_roc_auc_std = hist['valid auc-stdv'][-1]
+    valid_pr_auc_mean = hist['valid average_precision-mean'][-1]
+    valid_pr_auc_std = hist['valid average_precision-stdv'][-1]
+    
+    # Calculate baseline PR-AUC (positive class fraction)
+    baseline_pr_auc = target.mean()
+    
+    # Create metrics dictionary with validation metrics and baseline
+    metrics_dict = {
+        'timestamp': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'threshold': threshold if threshold is not None else 'N/A',
+        'n_features': len(train_features),
+        'baseline_pr_auc': round(baseline_pr_auc, 4),
+        'valid_roc_auc_mean': round(valid_roc_auc_mean, 4),
+        'valid_roc_auc_std': round(valid_roc_auc_std, 4),
+        'valid_pr_auc_mean': round(valid_pr_auc_mean, 4),
+        'valid_pr_auc_std': round(valid_pr_auc_std, 4),
+        'n_iterations': len(hist['valid auc-mean'])
+    }
+
+    metrics_file = Path(output_folder) / "cv_metrics.csv"
+    metrics_df = pd.DataFrame([metrics_dict])
+    
+    # Append to existing file or create new one
+    if metrics_file.exists():
+        existing_df = pd.read_csv(metrics_file)
+        metrics_df = pd.concat([existing_df, metrics_df], ignore_index=True)
+    
+    metrics_df.to_csv(metrics_file, index=False)
+    
+    return valid_roc_auc_mean, valid_roc_auc_std
     
 
 def objects_encoding(train_data, test_data_en):
@@ -869,7 +930,7 @@ def anomalies_handling(train_data, test_data_en):
 
     return 
 
-def data_correlations(data, output_folder, desc_data=None):
+def data_correlations(data, output_folder, threshold=0.60, desc_data=None):
     """
     Interpretations of the absolute value of the correlation coefficent are:
     .00-.19 “very weak”
@@ -890,14 +951,13 @@ def data_correlations(data, output_folder, desc_data=None):
     corr_pairs = corr_matrix.where(upper_tri).stack().sort_values()
 
     # Save full correlation matrix as CSV
-    # corr_matrix.to_csv(os.path.join("exploratory_data_analysis", "full_correlation_matrix.csv"))
+    corr_matrix.to_csv(os.path.join(output_folder, "full_correlation_matrix.csv"))
 
     # Store all pairwise correlations to CSV
     pairs_df = corr_pairs.reset_index()
     pairs_df.columns = ['feature_1', 'feature_2', 'correlation']
 
     # Find most positive correlation pairs (correlation > 0.60)
-    threshold = 0.60
     high_pairs = pairs_df[pairs_df['correlation'] > threshold].copy()
     high_pairs = high_pairs.sort_values(by='correlation', key=lambda s: s.abs(), ascending=False)
     high_pairs.to_csv(os.path.join(output_folder, 'most_positive_correlation_pairs.csv'), index=False)
@@ -970,7 +1030,7 @@ def data_correlations(data, output_folder, desc_data=None):
         plt.savefig(output_path, bbox_inches='tight', dpi=300)
         plt.close()
     
-    return 
+    return high_pairs, low_pairs, target_corr
 
 def corr_exam(train_data, output_folder):
     """
@@ -1217,19 +1277,18 @@ def main():
     display_distributions(actual_imp_df, null_imp_df, output_folder, feature='LIVINGAPARTMENTS_AVG')
     display_distributions(actual_imp_df, null_imp_df, output_folder, feature='CODE_GENDER')
 
-    features_scores(actual_imp_df, null_imp_df, output_folder)
-    corr_scores = correlation_scores(actual_imp_df, null_imp_df, output_folder)
+    percentile_scores = percentile_importances(actual_imp_df, null_imp_df, output_folder)
 
     percentage_scores = [0, 10, 20, 30 , 40, 50 ,60 , 70, 80 , 90, 95, 99]
     for threshold in percentage_scores:
-        split_feats = [_f for _f, _score, _ in corr_scores if _score >= threshold]
-        split_cat_feats = [_f for _f, _score, _ in corr_scores if (_score >= threshold) & (_f in categorical_features)]
-        gain_feats = [_f for _f, _, _score in corr_scores if _score >= threshold]
-        gain_cat_feats = [_f for _f, _, _score in corr_scores if (_score >= threshold) & (_f in categorical_features)]
+        # split_feats = [_f for _f, _score, _ in percentile_scores if _score >= threshold]
+        # split_cat_feats = [_f for _f, _score, _ in percentile_scores if (_score >= threshold) & (_f in categorical_features)]
+        gain_feats = [_f for _f, _, _score in percentile_scores if _score >= threshold]
+        gain_cat_feats = [_f for _f, _, _score in percentile_scores if (_score >= threshold) & (_f in categorical_features)]
                                                                                              
         print('Results for threshold %3d' % threshold)
-        split_results = score_feature_selection(df=train_data_en, train_features=split_feats, cat_cols=split_cat_feats, target=train_data_en['TARGET'])
-        print('\t SPLIT : %.6f +/- %.6f' % (split_results[0], split_results[1]))
+        # split_results = score_feature_selection(df=train_data_en, train_features=split_feats, cat_cols=split_cat_feats, target=train_data_en['TARGET'])
+        # print('\t SPLIT : %.6f +/- %.6f' % (split_results[0], split_results[1]))
         gain_results = score_feature_selection(df=train_data_en, train_features=gain_feats, cat_cols=gain_cat_feats, target=train_data_en['TARGET'])
         print('\t GAIN  : %.6f +/- %.6f' % (gain_results[0], gain_results[1]))
 
