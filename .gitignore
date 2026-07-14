@@ -6,3 +6,8 @@
 *.zip
 *.tar.gz
 *.pyc
+
+# internal docs (for tracking and agentic context)
+docs/decisions.md
+docs/experiments.md
+docs/open-questions.md
