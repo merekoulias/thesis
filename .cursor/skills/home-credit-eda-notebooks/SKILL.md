@@ -27,6 +27,8 @@ Before implementing, read:
 - `analysis/notebooks/00_dataset_overview.ipynb`
 - `analysis/notebooks/01_application_eda.ipynb`
 - `analysis/notebooks/02_bureau_eda.ipynb`
+- `analysis/notebooks/03_previous_applications_eda.ipynb`
+- `analysis/notebooks/04_installments_eda.ipynb`
 
 Use `00_dataset_overview.ipynb`, `01_application_eda.ipynb` and `02_bureau_eda.ipynb` only as style and output references. Do not use old implementation plans as the source of truth, because the user has changed notebook outputs manually.
 
