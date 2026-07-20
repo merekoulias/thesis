@@ -18,6 +18,7 @@ EDA was run **table by table**, separate from credit-scoring implementation:
 | `04_installments_eda.ipynb`          | `installments_payments.csv`                       |
 | `05_pos_cash_eda.ipynb`              | `POS_CASH_balance.csv`                            |
 | `06_credit_card_eda.ipynb`           | `credit_card_balance.csv`                         |
+| `07_protected_attributes.ipynb`      | Protected attributes + proxies (`application_*`)  |
 
 
 **Method (each notebook):**
@@ -37,7 +38,7 @@ EDA was run **table by table**, separate from credit-scoring implementation:
 - One-to-many child tables must be aggregated to `SK_ID_CURR` (often via `SK_ID_PREV` / `SK_ID_BUREAU` first).
 - Column meanings: `data/HomeCredit_columns_description.csv`.
 
-Protected-attribute deep dive is deferred to `07_protected_attributes.ipynb` (not covered here).
+Protected-attribute deep dive is in `07_protected_attributes.ipynb`.
 
 ---
 
@@ -219,6 +220,29 @@ Credit-card history is informative but sparse. Prioritize availability indicator
 
 
 
+## 07 — Protected attributes EDA
+
+**Scope:** Gender, education, gender × education intersections, and proxy candidates on application tables (audit-only; no model fairness metrics on predictions).
+
+### Findings
+
+- **Protected attributes:** `CODE_GENDER` and `NAME_EDUCATION_TYPE` present in train and test. Audit-only — exclude from model features.
+- **XNA:** 4 train rows with `CODE_GENDER == 'XNA'` (0 in test). Drop before fairness grouping.
+- **Gender (train, no XNA):** ~65.8% F / ~34.2% M. Raw default rates: F ~7.0%, M ~10.1% (max−min gap ≈ 3.1 pp). Descriptive outcome gap only — not a model fairness metric.
+- **Education (train, no XNA):** Secondary / secondary special dominates (~71%). Highest raw default: Lower secondary (~10.9%). Lowest: Academic degree (~1.8%, only 164 rows). Education max−min gap ≈ 9.1 pp.
+- **Intersectionality:** 10 gender × education cells after dropping XNA. Smallest: `M | Academic degree` (64) and `F | Academic degree` (100). Largest: `F | Secondary / secondary special` (~143k). Intersectional max−min default-rate gap ≈ 13.5 pp — larger than gender-only; report cell counts and consider worst-group metrics later. Minimum cell size / education merge still open.
+- **Train vs test:** Gender and education mixes align closely (small absolute share differences).
+- **Proxy candidates:** `OCCUPATION_TYPE`, `ORGANIZATION_TYPE`, `NAME_INCOME_TYPE`, `NAME_FAMILY_STATUS`, `NAME_HOUSING_TYPE`, and `REGION_RATING_*` associate with gender. Monitor in FE/fairness; exclude-vs-monitor policy still open.
+- **Not computed here:** Demographic parity / equal opportunity / equalized odds on model predictions, or mitigation.
+
+### Short summary
+
+Protected attributes are usable for audit grouping after dropping 4 `XNA` rows. Raw outcome gaps exist by gender and widen for gender × education, with sparse Academic-degree cells. Proxies need later audit; descriptive gaps motivate fairness work but are not model fairness metrics.
+
+---
+
+
+
 ## Overall summary (for FE and thesis)
 
 
@@ -229,10 +253,8 @@ Credit-card history is informative but sparse. Prioritize availability indicator
 - Train/test application schemas align except `TARGET` (8.1% positive class).
 - High coverage for previous apps, installments, and POS/cash; medium for bureau; low for credit cards and bureau monthly balances.
 
-
-
 ### Not yet covered
 
-- `07_protected_attributes.ipynb` — dedicated fairness/proxy audit.
 - Full feature engineering, null-importance selection, and model training (`fe.py` and later pipeline).
+- Fairness metrics on OOF predictions and mitigation (pre / in / post).
 
