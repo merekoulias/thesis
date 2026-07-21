@@ -1,0 +1,67 @@
+---
+description: Python standards for thesis pipeline code under src/
+globs: src/**/*.py
+alwaysApply: false
+---
+
+# Python standards (`src/`)
+
+Rules for feature engineering, modeling, and fairness packages. Notebooks use `.cursor/rules/python-data-analyst.mdc` instead.
+
+## Package layout
+
+- Prefer packages under `src/{data,features,models,fairness}` as in `src/README.md`.
+- One clear responsibility per module; keep entrypoints thin.
+- Do not put EDA notebooks or one-off plots in `src/`.
+
+## Style
+
+- Follow Black code formatting
+- Maximum line length of 88 characters (Black default)
+- Use isort for import sorting
+- Follow PEP 8; use clear, descriptive names.
+  - snake_case for functions and variables
+  - PascalCase for classes
+  - UPPER_CASE for constants
+- Type-annotate public functions (parameters and return types).
+- Import order: standard library → third-party → local (`src...`).
+- Never use mutable default arguments (`def f(xs=[])`); use `None` and create inside the body.
+- Prefer explicit constants over magic numbers/strings.
+
+## Type Hints
+- Use type hints for all function parameters and returns
+- Import types from `typing` module
+- Use `Optional[Type]` instead of `Type | None`
+- Use `TypeVar` for generic types
+- Define custom types in `types.py`
+- Use `Protocol` for duck typing
+
+## Paths and config
+
+- Resolve data and artifact paths with `pathlib.Path`.
+- Prefer settings from `configs/` (or env vars) over hard-coded absolute paths.
+- Never hard-code secrets, API keys, or credentials in source.
+
+## Data and performance
+
+- Prefer vectorized pandas / NumPy over Python row loops.
+- Home Credit tables are large: avoid unnecessary copies; delete large intermediates; use categorical dtypes where helpful.
+- When aggregating child tables, group to `SK_ID_CURR` (via `SK_ID_PREV` / `SK_ID_BUREAU` when needed).
+- Follow thesis decisions on protected attributes and feature policy (see `docs/decisions.md` and `thesis-context` rule).
+
+## Errors and I/O
+
+- Do not swallow exceptions on data load or validation; fail with a clear message (missing file, bad key, unexpected schema).
+- Catch specific exceptions; log or re-raise with context.
+- Specify encoding when reading/writing text files (e.g. CSV).
+
+## Testing
+
+- Keep light tests under `tests/` for: joins/key integrity, output shapes, and what columns go into `X`.
+- Mirror `src/` structure in test modules (`test_*.py`).
+- Prefer small fixtures or subsets over full-table CI runs.
+
+## Documentation
+- Use Google-style docstrings
+- Keep README.md updated
+- Document environment setup
