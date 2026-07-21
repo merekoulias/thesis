@@ -12,20 +12,18 @@ Bias in ML credit scoring and bias mitigation (pre-, in-, and post-processing). 
 - Single dataset: all Home Credit CSVs in `data/`, linked at `SK_ID_CURR` / `SK_ID_PREV` / `SK_ID_BUREAU`.
 - Target: `TARGET` (loan default). Column meanings: `data/HomeCredit_columns_description.csv`.
 - Protected attributes: `CODE_GENDER` (mandatory); intersectionality via gender × `NAME_EDUCATION_TYPE`.
-- **Exclude protected attributes from model features**; use only for audit, grouping, and mitigation. Check proxy features (region, occupation, income).
+- **Include** protected attributes in model features.
 
 ## Pipeline (not two competing models)
 - `analysis/notebooks/` — **EDA** (notebooks per table/domain; scripts/modules for shared helpers and heavy jobs). Separate from model implementation.
-- `fe.py` — **Feature engineering** across all tables, then **credit scoring model** (LightGBM on engineered features).
-- `data_analysis.py` — being migrated to `analysis/notebooks/`; do not extend for new EDA.
-- Goal: one credit scorer built from all relational tables → fairness audit → mitigation. Performance is nice-to-have, not an RQ.
+- `src/` = **Feature engineering** across all tables, then **credit scoring model** (LightGBM on engineered features).
+- **Goal:** one credit scorer built from all relational tables → fairness audit → mitigation. Performance is nice-to-have, not an RQ.
 
 ## Fairness work (not yet implemented)
 - Metrics (default): demographic parity, equal opportunity, equalized odds; worst-group disparity over gender×education.
-- Mitigation: one technique per stage (pre/in/post) — exact methods TBD. Library: prefer `fairlearn` unless changed.
+- Mitigation: one technique per stage (pre/in/post) — exact methods TBD.
 - Use out-of-fold predictions for fairness evaluation. Watch small intersectional cell counts.
 
 ## Repo conventions
 - All repo text in English unless explicitly told otherwise.
-- Data and outputs gitignored; paths: `data/`, `analysis/`, `exploratory_data_analysis/`, `engineered_features/`.
-- Resumed Jan 2026 on new machine after Oct 2025 pause; repo copied with uncommitted work.
+- Data and outputs gitignored; paths: `data/`

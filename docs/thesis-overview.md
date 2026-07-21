@@ -48,7 +48,8 @@ Also monitor proxy features (region, occupation, income type) that may encode pr
 
 | Stage | Location              | Status                                      | Role                                                                                                                              |
 | ----- | --------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| EDA   | `analysis/notebooks/` | Planned (migrating from `data_analysis.py`) | Notebooks per table/domain; scripts/modules for shared helpers and heavy jobs. See notebook list in [decisions.md](decisions.md). |
+| EDA   | `analysis/notebooks/` | Done | Notebooks per table/domain; scripts/modules for shared helpers and heavy jobs. See notebook list in [decisions.md](decisions.md). |
+| Feature engineering |  | TODO | Feature engineering and credit scoring model. |
 
 
 Credit scoring model, bias detection and fairness layer are **not yet implemented**.
@@ -62,10 +63,15 @@ thesis/
 ├── data/                          # Home Credit CSVs (gitignored)
 ├── analysis/
 │   └── notebooks/                 # EDA notebooks (see decisions.md)
-│   └── scripts/                   # Shared helpers and heavy jobs
-├── data_analysis.py               # Legacy EDA script (migrating to analysis/)
-├── fe.py                          # Feature engineering + credit scoring model
-├── feature_importance.py          # Experimental importance utilities
+├── src/
+│   ├── data/                      # load CSVs, validate keys, drop XNA, splits
+│   ├── features/                  # aggregates + application cleaning → client matrix
+│   ├── models/                    # LightGBM CV, save OOF preds + metrics
+│   └── fairness/                  # metrics + mitigation (thesis core; add when ready)
+├── configs/                       # paths, model params, protected-attr names
+├── tests/                         # light tests on joins / shapes / no protected attrs in X
+├── fe.py                          # Legacy feature engineering + credit scoring model script
+├── feature_importance.py          # Legacy experimental importance utilities
 └── docs/                          # Project documentation
 ```
 
