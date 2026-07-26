@@ -1,0 +1,4 @@
+# Default paths for the Home Credit pipeline.
+data_dir: data
+artifacts_dir: artifacts
+features_dir: artifacts/features

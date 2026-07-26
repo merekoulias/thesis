@@ -36,7 +36,13 @@ src/
 
 ## Status
 
-Packages are scaffolded; implementation is TODO. See [docs/thesis-overview.md](../docs/thesis-overview.md) and [docs/experiments.md](../docs/experiments.md).
+- `src/data/` and `src/features/` implement the minimal feature-engineering
+  pipeline (load → clean → aggregate → encode).
+- `src/models/` and `src/fairness/` remain TODO.
+- Run features: `python -m src.features.pipeline --data-dir data --artifacts-dir artifacts/features`
+- Run tests: `pytest tests/`
+
+See [docs/thesis-overview.md](../docs/thesis-overview.md) and [docs/experiments.md](../docs/experiments.md).
 
 ## Related docs
 

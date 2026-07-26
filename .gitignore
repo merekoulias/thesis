@@ -6,6 +6,9 @@
 *.zip
 *.tar.gz
 *.pyc
+artifacts/
+__pycache__/
+.pytest_cache/
 
 # internal docs (for tracking and agentic context)
 docs/decisions.md

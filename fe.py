@@ -8,6 +8,28 @@ import featuretools as ft
 from featuretools.primitives import AggregationPrimitive
 from woodwork.column_schema import ColumnSchema
 from woodwork.logical_types import Categorical, Double
+from woodwork.table_accessor import PandasTableAccessor
+from woodwork.column_accessor import PandasColumnAccessor
+
+
+def _patch_woodwork_accessor_cache():
+    """pandas 3+ creates a new accessor on each .ww access; woodwork stores state on the accessor."""
+    def _cached_accessor(accessor_cls, cache_key):
+        class _CachedAccessor:
+            def __get__(self, obj, cls):
+                if obj is None:
+                    return self
+                if cache_key not in obj.__dict__:
+                    obj.__dict__[cache_key] = accessor_cls(obj)
+                return obj.__dict__[cache_key]
+
+        return _CachedAccessor()
+
+    pd.DataFrame.ww = _cached_accessor(PandasTableAccessor, '_woodwork_df_accessor_cache')
+    pd.Series.ww = _cached_accessor(PandasColumnAccessor, '_woodwork_series_accessor_cache')
+
+
+_patch_woodwork_accessor_cache()
 from datetime import datetime, timedelta
 
 from collections import Counter

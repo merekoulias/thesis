@@ -1,0 +1,217 @@
+"""Shared fixtures for feature-engineering tests."""
+
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from src.data.loader import HomeCreditData
+
+
+@pytest.fixture
+def tiny_home_credit_data() -> HomeCreditData:
+    """Minimal multi-table fixture for FE contract tests."""
+    application_train = pd.DataFrame(
+        {
+            "SK_ID_CURR": [1, 2, 3, 4],
+            "TARGET": [0, 1, 0, 1],
+            "CODE_GENDER": ["F", "M", "F", "XNA"],
+            "NAME_EDUCATION_TYPE": [
+                "Secondary / secondary special",
+                "Higher education",
+                "Secondary / secondary special",
+                "Lower secondary",
+            ],
+            "NAME_CONTRACT_TYPE": [
+                "Cash loans",
+                "Cash loans",
+                "Revolving loans",
+                "Cash loans",
+            ],
+            "FLAG_OWN_CAR": ["N", "Y", "N", "Y"],
+            "AMT_INCOME_TOTAL": [100000.0, 200000.0, np.nan, 150000.0],
+            "DAYS_EMPLOYED": [-1000, 365243, -500, -200],
+            "OWN_CAR_AGE": [np.nan, 3.0, np.nan, 10.0],
+            "EXT_SOURCE_1": [0.2, np.nan, 0.5, np.nan],
+            "EXT_SOURCE_2": [0.3, 0.4, np.nan, 0.6],
+            "EXT_SOURCE_3": [np.nan, np.nan, 0.1, 0.2],
+            "APARTMENTS_AVG": [0.1, np.nan, 0.2, np.nan],
+            "APARTMENTS_MEDI": [0.1, np.nan, 0.2, np.nan],
+            "APARTMENTS_MODE": [0.1, np.nan, 0.2, np.nan],
+            "HOUSETYPE_MODE": ["block of flats", np.nan, "terraced house", np.nan],
+        }
+    )
+    application_test = pd.DataFrame(
+        {
+            "SK_ID_CURR": [10, 11],
+            "CODE_GENDER": ["M", "F"],
+            "NAME_EDUCATION_TYPE": [
+                "Higher education",
+                "Secondary / secondary special",
+            ],
+            "NAME_CONTRACT_TYPE": ["Cash loans", "Revolving loans"],
+            "FLAG_OWN_CAR": ["Y", "N"],
+            "AMT_INCOME_TOTAL": [120000.0, np.nan],
+            "DAYS_EMPLOYED": [365243, -300],
+            "OWN_CAR_AGE": [5.0, np.nan],
+            "EXT_SOURCE_1": [np.nan, 0.4],
+            "EXT_SOURCE_2": [0.5, np.nan],
+            "EXT_SOURCE_3": [0.3, np.nan],
+            "APARTMENTS_AVG": [np.nan, 0.3],
+            "APARTMENTS_MEDI": [np.nan, 0.3],
+            "APARTMENTS_MODE": [np.nan, 0.3],
+            "HOUSETYPE_MODE": [np.nan, "block of flats"],
+        }
+    )
+
+    bureau = pd.DataFrame(
+        {
+            "SK_ID_CURR": [1, 1, 2, 10],
+            "SK_ID_BUREAU": [100, 101, 102, 103],
+            "CREDIT_ACTIVE": ["Active", "Closed", "Active", "Closed"],
+            "CREDIT_CURRENCY": ["currency 1"] * 4,
+            "DAYS_CREDIT": [-100, -200, -50, -30],
+            "CREDIT_DAY_OVERDUE": [0, 0, 5, 0],
+            "DAYS_CREDIT_ENDDATE": [-10, 100, 20, 5],
+            "DAYS_ENDDATE_FACT": [np.nan, -5, np.nan, -1],
+            "AMT_CREDIT_MAX_OVERDUE": [0.0, np.nan, 10.0, np.nan],
+            "CNT_CREDIT_PROLONG": [0, 0, 1, 0],
+            "AMT_CREDIT_SUM": [1000.0, 2000.0, 1500.0, 800.0],
+            "AMT_CREDIT_SUM_DEBT": [100.0, -50.0, 200.0, 0.0],
+            "AMT_CREDIT_SUM_LIMIT": [500.0, -10.0, 0.0, 100.0],
+            "AMT_CREDIT_SUM_OVERDUE": [0.0, 0.0, 5.0, 0.0],
+            "CREDIT_TYPE": [
+                "Consumer credit",
+                "Credit card",
+                "Consumer credit",
+                "Microloan",
+            ],
+            "DAYS_CREDIT_UPDATE": [-10, -20, -5, -2],
+            "AMT_ANNUITY": [np.nan, 50.0, 40.0, np.nan],
+        }
+    )
+    bureau_balance = pd.DataFrame(
+        {
+            "SK_ID_BUREAU": [100, 100, 101, 102],
+            "MONTHS_BALANCE": [-1, -2, -1, -1],
+            "STATUS": ["0", "1", "C", "0"],
+        }
+    )
+    previous_application = pd.DataFrame(
+        {
+            "SK_ID_PREV": [1000, 1001, 1002, 1003],
+            "SK_ID_CURR": [1, 1, 2, 10],
+            "NAME_CONTRACT_TYPE": [
+                "Consumer loans",
+                "Cash loans",
+                "Consumer loans",
+                "Revolving loans",
+            ],
+            "AMT_ANNUITY": [100.0, 200.0, 150.0, 80.0],
+            "AMT_APPLICATION": [1000.0, 0.0, 2000.0, 500.0],
+            "AMT_CREDIT": [900.0, 1500.0, 1800.0, 500.0],
+            "AMT_DOWN_PAYMENT": [100.0, np.nan, 200.0, np.nan],
+            "AMT_GOODS_PRICE": [1000.0, np.nan, 2000.0, np.nan],
+            "NAME_CONTRACT_STATUS": [
+                "Approved",
+                "Refused",
+                "Approved",
+                "Approved",
+            ],
+            "DAYS_DECISION": [-100, -200, -50, -20],
+            "NAME_CLIENT_TYPE": ["Repeater", "New", "Repeater", "New"],
+            "NAME_PRODUCT_TYPE": ["x-sell", "x-sell", "walk-in", "x-sell"],
+            "CHANNEL_TYPE": [
+                "Country-wide",
+                "Credit and cash offices",
+                "Country-wide",
+                "AP+ (Cash loan)",
+            ],
+            "SELLERPLACE_AREA": [100, -1, 50, 10],
+            "CNT_PAYMENT": [12, 6, 24, 0],
+            "DAYS_FIRST_DRAWING": [365243, -10, 365243, -5],
+            "DAYS_FIRST_DUE": [-90, -180, -40, 365243],
+            "DAYS_LAST_DUE_1ST_VERSION": [-10, -20, 0, 365243],
+            "DAYS_LAST_DUE": [-10, 365243, 0, 365243],
+            "DAYS_TERMINATION": [-5, 365243, 5, 365243],
+            "RATE_INTEREST_PRIMARY": [np.nan, np.nan, 0.1, np.nan],
+            "RATE_INTEREST_PRIVILEGED": [np.nan, np.nan, np.nan, np.nan],
+            "RATE_DOWN_PAYMENT": [0.1, np.nan, 0.2, np.nan],
+        }
+    )
+    installments_payments = pd.DataFrame(
+        {
+            "SK_ID_PREV": [1000, 1000, 1000, 1002],
+            "SK_ID_CURR": [1, 1, 1, 2],
+            "NUM_INSTALMENT_VERSION": [1, 1, 1, 1],
+            "NUM_INSTALMENT_NUMBER": [1, 1, 2, 1],
+            "DAYS_INSTALMENT": [-90, -90, -60, -40],
+            "DAYS_ENTRY_PAYMENT": [-88, -87, -50, np.nan],
+            "AMT_INSTALMENT": [100.0, 100.0, 100.0, 150.0],
+            "AMT_PAYMENT": [40.0, 60.0, 100.0, np.nan],
+        }
+    )
+    pos_cash = pd.DataFrame(
+        {
+            "SK_ID_PREV": [1000, 1000, 1002],
+            "SK_ID_CURR": [1, 1, 2],
+            "MONTHS_BALANCE": [-1, -2, -1],
+            "CNT_INSTALMENT": [12, 12, 24],
+            "CNT_INSTALMENT_FUTURE": [10, 11, 20],
+            "NAME_CONTRACT_STATUS": ["Active", "Active", "Completed"],
+            "SK_DPD": [0, 5, 0],
+            "SK_DPD_DEF": [0, 0, 0],
+        }
+    )
+    credit_card = pd.DataFrame(
+        {
+            "SK_ID_PREV": [1003, 1003],
+            "SK_ID_CURR": [10, 10],
+            "MONTHS_BALANCE": [-1, -2],
+            "AMT_BALANCE": [100.0, 0.0],
+            "AMT_CREDIT_LIMIT_ACTUAL": [500.0, 500.0],
+            "AMT_DRAWINGS_CURRENT": [50.0, 0.0],
+            "AMT_INST_MIN_REGULARITY": [20.0, 20.0],
+            "AMT_PAYMENT_CURRENT": [10.0, 25.0],
+            "AMT_TOTAL_RECEIVABLE": [100.0, 0.0],
+            "AMT_RECIVABLE": [100.0, 0.0],
+            "AMT_RECEIVABLE_PRINCIPAL": [90.0, 0.0],
+            "SK_DPD": [0, 2],
+            "SK_DPD_DEF": [0, 0],
+            "NAME_CONTRACT_STATUS": ["Active", "Active"],
+        }
+    )
+
+    # Drop XNA outside loader for fixture consistency with pipeline path
+    # that expects already-validated frames; tests for loader cover XNA.
+    return HomeCreditData(
+        application_train=application_train,
+        application_test=application_test,
+        bureau=bureau,
+        bureau_balance=bureau_balance,
+        previous_application=previous_application,
+        installments_payments=installments_payments,
+        pos_cash=pos_cash,
+        credit_card=credit_card,
+        xna_gender_rows_dropped=0,
+    )
+
+
+@pytest.fixture
+def fixture_csv_dir(tiny_home_credit_data: HomeCreditData, tmp_path: Path) -> Path:
+    """Write tiny fixtures to a temporary CSV directory."""
+    data = tiny_home_credit_data
+    mapping = {
+        "application_train.csv": data.application_train,
+        "application_test.csv": data.application_test,
+        "bureau.csv": data.bureau,
+        "bureau_balance.csv": data.bureau_balance,
+        "previous_application.csv": data.previous_application,
+        "installments_payments.csv": data.installments_payments,
+        "POS_CASH_balance.csv": data.pos_cash,
+        "credit_card_balance.csv": data.credit_card,
+    }
+    for name, frame in mapping.items():
+        frame.to_csv(tmp_path / name, index=False)
+    return tmp_path
