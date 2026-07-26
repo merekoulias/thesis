@@ -1,0 +1,21 @@
+pytest.ini
+  s_b832704ce96aca::t_e5d189f88687f4 1-3
+requirements.txt
+  s_b832704ce96aca::t_fa447dd1d55416 1-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a6b72dfd3aa15c276bf010a5167d5569f2634de2",
+  "prompts": {},
+  "sessions": {
+    "s_b832704ce96aca": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "add8f2e2-f44a-4636-82eb-923a8ea0ee98",
+        "model": "grok-4.5"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
