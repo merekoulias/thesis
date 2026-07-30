@@ -46,6 +46,9 @@ See [docs/thesis-overview.md](../docs/thesis-overview.md) and [docs/experiments.
 
 ## Related docs
 
+- [Feature engineering](../docs/feature_engineering.md)
+- [Child-table aggregation](../docs/child_tables_aggregation.md)
+- [Encoding](../docs/encoding.md)
 - [Thesis overview](../docs/thesis-overview.md)
 - [Decisions](../docs/decisions.md)
 - [EDA findings](../docs/EDA.md)
