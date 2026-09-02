@@ -36,16 +36,18 @@ src/
 
 ## Status
 
-- `src/data/` and `src/features/` implement the minimal feature-engineering
-  pipeline (load → clean → aggregate → encode).
-- `src/models/` and `src/fairness/` remain TODO.
+- `src/data/` and `src/features/` implement feature engineering (load → clean → aggregate → encode).
+- `src/models/` implements LightGBM stratified CV with OOF predictions and ROC AUC.
+- `src/fairness/` remains TODO.
 - Run features: `python -m src.features.pipeline --data-dir data --artifacts-dir artifacts/features`
+- Run model: `python -m src.models.pipeline --features-dir artifacts/features --models-dir artifacts/models`
 - Run tests: `pytest tests/`
 
 See [docs/thesis-overview.md](../docs/thesis-overview.md) and [docs/experiments.md](../docs/experiments.md).
 
 ## Related docs
 
+- [Credit scoring](../docs/credit_scoring.md)
 - [Feature engineering](../docs/feature_engineering.md)
 - [Child-table aggregation](../docs/child_tables_aggregation.md)
 - [Encoding](../docs/encoding.md)

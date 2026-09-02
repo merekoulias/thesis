@@ -32,13 +32,13 @@ Deliverables: **code repository**, **written thesis**, and **presentation**. Int
 
 **Target:** `TARGET` — 1 if the client had payment difficulties on early installments, 0 otherwise.
 
-**Protected attributes (for fairness only, not model features):**
+**Protected attributes (included in model features and used for fairness grouping):**
 
 
 | Attribute | Column                | Notes                                           |
 | --------- | --------------------- | ----------------------------------------------- |
-| Gender    | `CODE_GENDER`         | Mandatory. Drop `XNA` rows (4 in training set). |
-| Education | `NAME_EDUCATION_TYPE` | Used with gender for intersectionality.         |
+| Gender    | `CODE_GENDER`         | Mandatory. Drop `XNA` rows (4 in training set). One-hot encoded in `X`. |
+| Education | `NAME_EDUCATION_TYPE` | Used with gender for intersectionality. One-hot encoded in `X`. |
 
 
 Also monitor proxy features (region, occupation, income type) that may encode protected-attribute information.
@@ -46,13 +46,12 @@ Also monitor proxy features (region, occupation, income type) that may encode pr
 ## Workflow (EDA → feature engineering → credit scoring → fairness)
 
 
-| Stage | Location              | Status                                      | Role                                                                                                                              |
-| ----- | --------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| EDA   | `analysis/notebooks/` | Done | Notebooks per table/domain; scripts/modules for shared helpers and heavy jobs. See notebook list in [decisions.md](decisions.md). |
-| Feature engineering |  | TODO | Feature engineering and credit scoring model. |
-
-
-Credit scoring model, bias detection and fairness layer are **not yet implemented**.
+| Stage | Location              | Status | Role                                                                                                                              |
+| ----- | --------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| EDA   | `analysis/notebooks/` | Done   | Notebooks per table/domain; scripts/modules for shared helpers and heavy jobs. See notebook list in [decisions.md](decisions.md). |
+| Feature engineering | `src/features/` | Done   | Load → clean → aggregate → encode to model-ready matrices. See [feature_engineering.md](feature_engineering.md). |
+| Credit scoring | `src/models/` | Done   | LightGBM 5-fold stratified CV with OOF predictions. See [credit_scoring.md](credit_scoring.md). |
+| Fairness | `src/fairness/` | TODO   | Metrics and mitigation on OOF scores. |
 
 **Not in scope:** model performance as a research question. Better predictive performance is nice-to-have, not a thesis target.
 
@@ -69,7 +68,7 @@ thesis/
 │   ├── models/                    # LightGBM CV, save OOF preds + metrics
 │   └── fairness/                  # metrics + mitigation (thesis core; add when ready)
 ├── configs/                       # paths, model params, protected-attr names
-├── tests/                         # light tests on joins / shapes / no protected attrs in X
+├── tests/                         # light tests on joins / shapes / model contracts
 ├── fe.py                          # Legacy feature engineering + credit scoring model script
 ├── feature_importance.py          # Legacy experimental importance utilities
 └── docs/                          # Project documentation

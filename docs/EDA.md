@@ -33,7 +33,7 @@ EDA was run **table by table**, separate from credit-scoring implementation:
 **Conventions carried into FE:**
 
 - Join keys: `SK_ID_CURR`, `SK_ID_PREV`, `SK_ID_BUREAU`.
-- Protected attributes (`CODE_GENDER`, `NAME_EDUCATION_TYPE`) are audit-only, not model features.
+- Protected attributes (`CODE_GENDER`, `NAME_EDUCATION_TYPE`) are **included** in model features (one-hot encoded) and also retained raw in `fairness_groups_*` for audit. See [decisions.md](decisions.md).
 - Day/month fields are relative to the current application date.
 - One-to-many child tables must be aggregated to `SK_ID_CURR` (often via `SK_ID_PREV` / `SK_ID_BUREAU` first).
 - Column meanings: `data/HomeCredit_columns_description.csv`.
@@ -84,7 +84,7 @@ The dataset is a clean relational graph around current applications. Most auxili
 
 ### Short summary
 
-Application tables are ID-clean and train/test aligned. Main FE issues are class imbalance, high-missing building/car-age fields, the `DAYS_EMPLOYED` sentinel, redundant building suffixes, and excluding protected attributes while keeping proxies for later audit.
+Application tables are ID-clean and train/test aligned. Main FE issues are class imbalance, high-missing building/car-age fields, the `DAYS_EMPLOYED` sentinel, redundant building suffixes, and retaining protected attributes in `X` while also keeping raw groups for fairness audit.
 
 ---
 
@@ -222,11 +222,11 @@ Credit-card history is informative but sparse. Prioritize availability indicator
 
 ## 07 — Protected attributes EDA
 
-**Scope:** Gender, education, gender × education intersections, and proxy candidates on application tables (audit-only; no model fairness metrics on predictions).
+**Scope:** Gender, education, gender × education intersections, and proxy candidates on application tables (fairness audit; no model fairness metrics on predictions in EDA).
 
 ### Findings
 
-- **Protected attributes:** `CODE_GENDER` and `NAME_EDUCATION_TYPE` present in train and test. Audit-only — exclude from model features.
+- **Protected attributes:** `CODE_GENDER` and `NAME_EDUCATION_TYPE` present in train and test. Included in model features (one-hot encoded in `X`); raw values also kept in `fairness_groups_*` for grouping.
 - **XNA:** 4 train rows with `CODE_GENDER == 'XNA'` (0 in test). Drop before fairness grouping.
 - **Gender (train, no XNA):** ~65.8% F / ~34.2% M. Raw default rates: F ~7.0%, M ~10.1% (max−min gap ≈ 3.1 pp). Descriptive outcome gap only — not a model fairness metric.
 - **Education (train, no XNA):** Secondary / secondary special dominates (~71%). Highest raw default: Lower secondary (~10.9%). Lowest: Academic degree (~1.8%, only 164 rows). Education max−min gap ≈ 9.1 pp.
