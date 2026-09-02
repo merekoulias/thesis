@@ -1,0 +1,38 @@
+configs/model.yaml
+  h_fb28706d16b101 1-27
+configs/paths.yaml
+  h_fb28706d16b101 5
+docs/EDA.md
+  h_fb28706d16b101 36,87,225,229
+docs/credit_scoring.md
+  h_fb28706d16b101 1-167
+docs/thesis-overview.md
+  h_fb28706d16b101 35,40-41,49-54,71
+requirements.txt
+  h_fb28706d16b101 12
+src/README.md
+  h_fb28706d16b101 39-41,43,50
+src/models/__init__.py
+  h_fb28706d16b101 1-33
+src/models/io.py
+  h_fb28706d16b101 1-145
+src/models/pipeline.py
+  h_fb28706d16b101 1-176
+src/models/training.py
+  h_fb28706d16b101 1-204
+src/models/types.py
+  h_fb28706d16b101 1-60
+tests/test_models_pipeline.py
+  h_fb28706d16b101 1-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "85e705bcd458b1edcac95a946d35094205b73c40",
+  "prompts": {},
+  "humans": {
+    "h_fb28706d16b101": {
+      "author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
