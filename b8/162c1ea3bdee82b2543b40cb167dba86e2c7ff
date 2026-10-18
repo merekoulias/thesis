@@ -1,0 +1,19 @@
+.cursor/rules/thesis-context.mdc
+  s_81db573ec907cd::t_92fcc05bc26ea7 14,23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b8162c1ea3bdee82b2543b40cb167dba86e2c7ff",
+  "prompts": {},
+  "sessions": {
+    "s_81db573ec907cd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "63b02b3d-3f99-4e45-ab06-b8b24427130c",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
