@@ -11,7 +11,7 @@ Bias in ML credit scoring and bias mitigation (pre-, in-, and post-processing). 
 ## Dataset
 - Single dataset: all Home Credit CSVs in `data/`, linked at `SK_ID_CURR` / `SK_ID_PREV` / `SK_ID_BUREAU`.
 - Target: `TARGET` (loan default). Column meanings: `data/HomeCredit_columns_description.csv`.
-- Protected attributes: `CODE_GENDER` (mandatory); intersectionality via gender × `NAME_EDUCATION_TYPE`.
+- Protected attributes: `CODE_GENDER` (mandatory); intersectionality via gender × `DAYS_BIRTH`.
 - **Include** protected attributes in model features.
 
 ## Pipeline (not two competing models)
@@ -20,7 +20,7 @@ Bias in ML credit scoring and bias mitigation (pre-, in-, and post-processing). 
 - **Goal:** one credit scorer built from all relational tables → fairness audit → mitigation. Performance is nice-to-have, not an RQ.
 
 ## Fairness work (not yet implemented)
-- Metrics (default): demographic parity, equal opportunity, equalized odds; worst-group disparity over gender×education.
+- Metrics (default): demographic parity, equal opportunity, equalized odds; worst-group disparity over gender×age.
 - Mitigation: one technique per stage (pre/in/post) — exact methods TBD.
 - Use out-of-fold predictions for fairness evaluation. Watch small intersectional cell counts.
 
