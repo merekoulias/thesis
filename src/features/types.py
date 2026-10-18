@@ -6,6 +6,10 @@ from typing import List, Optional
 import pandas as pd
 
 from src.constants import (  # noqa: F401 — re-export for features consumers
+    AGE_BAND_COL,
+    AGE_BAND_EDGES,
+    AGE_YEARS_COL,
+    DAYS_PER_YEAR,
     DAYS_SENTINEL,
     INTERSECTION_COL,
     MISSING_TOKEN,

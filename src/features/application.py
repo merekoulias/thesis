@@ -6,6 +6,10 @@ import numpy as np
 import pandas as pd
 
 from src.features.types import (
+    AGE_BAND_COL,
+    AGE_BAND_EDGES,
+    AGE_YEARS_COL,
+    DAYS_PER_YEAR,
     DAYS_SENTINEL,
     INTERSECTION_COL,
     PROTECTED_ATTRIBUTES,
@@ -43,23 +47,56 @@ def _replace_days_employed_sentinel(
     return out, n_anom
 
 
+def assign_age_band(days_birth: pd.Series) -> pd.Series:
+    """Map DAYS_BIRTH to left-closed 10-year age bands.
+
+    Age in years is ``-DAYS_BIRTH / 365.25``. Bands follow ``AGE_BAND_EDGES``
+    and are labelled ``"20-29"``, ``"30-39"``, and so on.
+
+    Args:
+        days_birth: Age in days at application, as negative integers.
+
+    Returns:
+        String band labels aligned to ``days_birth``.
+
+    Raises:
+        ValueError: If any age is missing or outside the band edges.
+    """
+    age_years = -days_birth / DAYS_PER_YEAR
+    labels = [
+        f"{lo}-{hi - 1}" for lo, hi in zip(AGE_BAND_EDGES[:-1], AGE_BAND_EDGES[1:])
+    ]
+    bands = pd.cut(age_years, bins=AGE_BAND_EDGES, right=False, labels=labels)
+    if bands.isna().any():
+        bad = age_years[bands.isna()]
+        raise ValueError(
+            f"{len(bad)} ages outside [{AGE_BAND_EDGES[0]}, {AGE_BAND_EDGES[-1]}) "
+            f"years or missing (e.g. {bad.head(3).tolist()})"
+        )
+    return bands.astype(str)
+
+
 def extract_fairness_groups(app: pd.DataFrame) -> pd.DataFrame:
-    """Return raw protected attributes and intersection labels.
+    """Return raw protected attributes and fairness grouping labels.
+
+    The intersectional group is gender x 10-year age band
+    (``GENDER_AGE``, e.g. ``"F | 30-39"``).
 
     Args:
         app: Application frame containing protected attribute columns.
 
     Returns:
-        DataFrame with SK_ID_CURR, protected attrs, and intersection.
+        DataFrame with SK_ID_CURR, CODE_GENDER, DAYS_BIRTH, AGE_YEARS,
+        AGE_BAND, and GENDER_AGE.
     """
     missing = [c for c in PROTECTED_ATTRIBUTES if c not in app.columns]
     if missing:
         raise KeyError(f"Missing protected attributes: {missing}")
     groups = app[[SK_ID_CURR] + PROTECTED_ATTRIBUTES].copy()
+    groups[AGE_YEARS_COL] = -groups["DAYS_BIRTH"] / DAYS_PER_YEAR
+    groups[AGE_BAND_COL] = assign_age_band(groups["DAYS_BIRTH"])
     groups[INTERSECTION_COL] = (
-        groups["CODE_GENDER"].astype(str)
-        + " | "
-        + groups["NAME_EDUCATION_TYPE"].astype(str)
+        groups["CODE_GENDER"].astype(str) + " | " + groups[AGE_BAND_COL]
     )
     return groups
 

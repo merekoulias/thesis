@@ -17,7 +17,7 @@ Train a reproducible baseline classifier on the engineered applicant matrix:
 - **OOF predictions:** One predicted probability per training applicant for unbiased fairness evaluation
 - **No Kaggle submission** and no evaluation on unlabeled `application_test`
 
-Protected attributes (`CODE_GENDER`, `NAME_EDUCATION_TYPE`) remain **encoded in `X`** per [decisions.md](decisions.md). Raw grouping labels live in `fairness_groups_train.parquet` from the feature stage.
+Protected attributes remain **in `X`** per [decisions.md](decisions.md): `CODE_GENDER` one-hot (`cat__CODE_GENDER_*`) and `DAYS_BIRTH` numeric (`num__DAYS_BIRTH`). Raw grouping labels (gender, 10-year age band, gender × age) live in `fairness_groups_train.parquet` from the feature stage.
 
 ---
 
@@ -65,7 +65,7 @@ Reads from `artifacts/features/` (output of `python -m src.features.pipeline`):
 - Row alignment across `X`, `y`, and `ids`
 - Unique `SK_ID_CURR`; no `TARGET` in `X`
 - Binary non-missing `TARGET`; finite numeric `X`
-- Encoded columns containing `CODE_GENDER` and `NAME_EDUCATION_TYPE` must be present
+- Columns containing `CODE_GENDER` and `DAYS_BIRTH` must be present
 
 `X_test` is **not** used by the baseline scorer.
 
@@ -152,9 +152,9 @@ From [experiments.md](experiments.md):
 The fairness layer (`src/fairness/`, not yet implemented) should consume:
 
 - `artifacts/models/oof_predictions.parquet` — predicted probabilities
-- `artifacts/features/fairness_groups_train.parquet` — raw gender, education, intersection labels
+- `artifacts/features/fairness_groups_train.parquet` — raw `CODE_GENDER` and `DAYS_BIRTH`, `AGE_BAND`, and `GENDER_AGE` labels
 
-Join on row order or `SK_ID_CURR`. Threshold selection for hard predictions is deferred to the fairness stage.
+Join on `SK_ID_CURR` (not on row order), and check that no applicant is lost. Hard predictions are made in the fairness stage, not here: each model gets one group-blind threshold that flags the same share of applications as the base rate (8.07%), i.e. the `1 − base rate` quantile of its OOF scores. For this baseline that is `t ≈ 0.209`; `t = 0.5` would flag only 0.61%. See [decisions.md](decisions.md) (rows "Decision threshold", "Rate orientation").
 
 ---
 

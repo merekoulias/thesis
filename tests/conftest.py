@@ -17,6 +17,7 @@ def tiny_home_credit_data() -> HomeCreditData:
             "SK_ID_CURR": [1, 2, 3, 4],
             "TARGET": [0, 1, 0, 1],
             "CODE_GENDER": ["F", "M", "F", "XNA"],
+            "DAYS_BIRTH": [-9000, -12000, -16000, -20000],
             "NAME_EDUCATION_TYPE": [
                 "Secondary / secondary special",
                 "Higher education",
@@ -46,6 +47,7 @@ def tiny_home_credit_data() -> HomeCreditData:
         {
             "SK_ID_CURR": [10, 11],
             "CODE_GENDER": ["M", "F"],
+            "DAYS_BIRTH": [-11000, -22000],
             "NAME_EDUCATION_TYPE": [
                 "Higher education",
                 "Secondary / secondary special",

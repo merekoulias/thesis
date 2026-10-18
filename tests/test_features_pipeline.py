@@ -7,7 +7,12 @@ import pandas as pd
 
 from src.data.loader import HomeCreditData, load_home_credit_data
 from src.features.pipeline import build_features, save_feature_artifacts
-from src.features.types import INTERSECTION_COL, PROTECTED_ATTRIBUTES, TARGET_COL
+from src.features.types import (
+    AGE_BAND_COL,
+    INTERSECTION_COL,
+    PROTECTED_ATTRIBUTES,
+    TARGET_COL,
+)
 
 
 def _drop_xna(data: HomeCreditData) -> HomeCreditData:
@@ -61,16 +66,16 @@ def test_build_features_contract(tiny_home_credit_data: HomeCreditData) -> None:
     gender_cols = [
         c for c in bundle.X_train.columns if "CODE_GENDER" in c
     ]
-    edu_cols = [
-        c for c in bundle.X_train.columns if "NAME_EDUCATION_TYPE" in c
-    ]
     assert gender_cols, "Expected encoded CODE_GENDER columns in X"
-    assert edu_cols, "Expected encoded NAME_EDUCATION_TYPE columns in X"
+    assert "num__DAYS_BIRTH" in bundle.X_train.columns
 
-    # Raw fairness groups retained
-    for col in PROTECTED_ATTRIBUTES + [INTERSECTION_COL]:
-        assert col in bundle.fairness_groups_train.columns
-    assert len(bundle.fairness_groups_train) == len(bundle.X_train)
+    # Raw fairness groups retained, with gender x age-band intersection
+    groups = bundle.fairness_groups_train
+    for col in PROTECTED_ATTRIBUTES + [AGE_BAND_COL, INTERSECTION_COL]:
+        assert col in groups.columns
+    assert len(groups) == len(bundle.X_train)
+    # DAYS_BIRTH -9000 / -12000 / -16000 -> 24.6 / 32.9 / 43.8 years
+    assert groups[INTERSECTION_COL].tolist() == ["F | 20-29", "M | 30-39", "F | 40-49"]
 
 
 def test_build_features_from_csv_dir(fixture_csv_dir: Path) -> None:

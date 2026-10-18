@@ -41,14 +41,18 @@ def _require_file(directory: Path, name: str) -> Path:
 
 
 def _validate_protected_columns(feature_names: list) -> None:
-    """Ensure encoded protected-attribute columns are present in X."""
+    """Ensure protected-attribute columns are present in X.
+
+    Gender is one-hot encoded (``cat__CODE_GENDER_*``); age enters as the
+    numeric ``num__DAYS_BIRTH`` column.
+    """
     missing = []
     for attr in PROTECTED_ATTRIBUTES:
         if not any(attr in col for col in feature_names):
             missing.append(attr)
     if missing:
         raise ValueError(
-            f"Encoded protected attributes missing from X: {missing}. "
+            f"Protected attributes missing from X: {missing}. "
             f"Expected columns containing {PROTECTED_ATTRIBUTES}."
         )
 

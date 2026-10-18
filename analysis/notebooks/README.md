@@ -16,7 +16,7 @@ Consolidated findings: [docs/EDA.md](../../docs/EDA.md).
 | `04_installments_eda.ipynb`          | Installment payment history                                     |
 | `05_pos_cash_eda.ipynb`              | POS / cash monthly balances                                     |
 | `06_credit_card_eda.ipynb`           | Credit-card monthly balances                                    |
-| `07_protected_attributes.ipynb`      | Protected attributes and proxy candidates (audit only)          |
+| `07_protected_attributes.ipynb`      | Gender, age, gender × 10-year age bands, proxy candidates       |
 
 
 
@@ -27,7 +27,7 @@ Consolidated findings: [docs/EDA.md](../../docs/EDA.md).
 - Null-importance feature selection
 - Fairness metrics / mitigation
 
-Protected attributes (`CODE_GENDER`, `NAME_EDUCATION_TYPE`) are for audit and grouping only, not model features.
+Protected attributes are `CODE_GENDER` and age (`DAYS_BIRTH`). They are **included** as model features and also kept raw for fairness grouping (gender × 10-year age bands); see [docs/decisions.md](../../docs/decisions.md).
 
 ## How to run
 

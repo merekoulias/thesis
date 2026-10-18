@@ -57,7 +57,12 @@ def _read_csv(path: Path, **kwargs: object) -> pd.DataFrame:
 def _drop_xna_gender(
     train: pd.DataFrame, test: pd.DataFrame
 ) -> Tuple[pd.DataFrame, pd.DataFrame, int]:
-    """Drop rows with CODE_GENDER == 'XNA' from train and test."""
+    """Drop rows with CODE_GENDER == 'XNA' from train and test.
+
+    This is an exclusion forced by the data, applied before training and
+    evaluation: XNA is undefined, too rare (4 train rows, 0 test rows, all
+    TARGET = 0) for any group metric, and is not redistributed to F/M.
+    """
     train_mask = train["CODE_GENDER"] == "XNA"
     test_mask = test["CODE_GENDER"] == "XNA"
     n_dropped = int(train_mask.sum() + test_mask.sum())

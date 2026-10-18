@@ -2,9 +2,10 @@
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.data.loader import HomeCreditData
-from src.features.application import clean_application
+from src.features.application import assign_age_band, clean_application
 from src.features.bureau import aggregate_bureau
 from src.features.installments import aggregate_installments
 from src.features.types import DAYS_SENTINEL, SK_ID_CURR, TARGET_COL
@@ -34,6 +35,27 @@ def test_clean_application_sentinel_and_building_dedup(
     assert "HOUSETYPE_MODE" in train_x.columns
     assert report.xna_gender_rows_dropped == 1
     assert "APARTMENTS_MEDI" in report.building_columns_dropped
+
+
+def test_assign_age_band_left_closed_edges() -> None:
+    years = pd.Series([20.0, 29.99, 30.0, 49.5, 59.99, 60.0, 69.99])
+    days_birth = -years * 365.25
+    bands = assign_age_band(days_birth)
+    assert bands.tolist() == [
+        "20-29",
+        "20-29",
+        "30-39",
+        "40-49",
+        "50-59",
+        "60-69",
+        "60-69",
+    ]
+
+
+@pytest.mark.parametrize("years", [19.9, 70.0, np.nan])
+def test_assign_age_band_rejects_out_of_range(years: float) -> None:
+    with pytest.raises(ValueError, match="outside"):
+        assign_age_band(pd.Series([-30.0 * 365.25, -years * 365.25]))
 
 
 def test_bureau_aggregates_one_row_per_client(

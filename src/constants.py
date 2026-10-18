@@ -7,8 +7,15 @@ SK_ID_PREV = "SK_ID_PREV"
 SK_ID_BUREAU = "SK_ID_BUREAU"
 
 TARGET_COL = "TARGET"
-PROTECTED_ATTRIBUTES: List[str] = ["CODE_GENDER", "NAME_EDUCATION_TYPE"]
-INTERSECTION_COL = "GENDER_EDUCATION"
+PROTECTED_ATTRIBUTES: List[str] = ["CODE_GENDER", "DAYS_BIRTH"]
+
+# Fairness grouping: gender x 10-year age bands (see docs/decisions.md)
+AGE_YEARS_COL = "AGE_YEARS"
+AGE_BAND_COL = "AGE_BAND"
+INTERSECTION_COL = "GENDER_AGE"
+DAYS_PER_YEAR = 365.25
+# Left-closed band edges in years: [20, 30), [30, 40), ..., [60, 70)
+AGE_BAND_EDGES: List[int] = [20, 30, 40, 50, 60, 70]
 
 # Home Credit date sentinel (unemployed / not applicable)
 DAYS_SENTINEL = 365243

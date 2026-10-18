@@ -40,7 +40,7 @@ Pipeline flow is `src/data/` → `src/features/` → `src/models/` → `src/fair
 
 - **`src/data/`** — `load_home_credit_data()` returns a `HomeCreditData` bundle of all tables, validates `SK_ID_CURR` / `SK_ID_PREV` / `SK_ID_BUREAU` keys, and drops XNA gender rows.
 - **`src/features/`** — `pipeline.build_features()` orchestrates:
-  1. `application.clean_application()` cleans the applicant "spine" (`DAYS_EMPLOYED` 365243 sentinel → NaN + `DAYS_EMPLOYED_ANOM` flag; drop `_MEDI`/`_MODE` building duplicates in favour of `_AVG`; split out `TARGET`) and `extract_fairness_groups()` copies raw gender/education/`GENDER_EDUCATION`.
+  1. `application.clean_application()` cleans the applicant "spine" (`DAYS_EMPLOYED` 365243 sentinel → NaN + `DAYS_EMPLOYED_ANOM` flag; drop `_MEDI`/`_MODE` building duplicates in favour of `_AVG`; split out `TARGET`) and `extract_fairness_groups()` copies raw `CODE_GENDER`/`DAYS_BIRTH` and adds `AGE_YEARS`, 10-year `AGE_BAND` (`assign_age_band()`, edges in `src/constants.py`) and `GENDER_AGE`.
   2. One module per child table (`bureau.py`, `previous.py`, `installments.py`, `pos_cash.py`, `credit_card.py`) aggregates one-to-many history to **one row per `SK_ID_CURR`** (via `SK_ID_PREV` / `SK_ID_BUREAU` as needed), with column prefixes `BUREAU_`, `PREV_`, `INST_`, `POS_`, `CC_` and a `HAS_*_HISTORY` flag.
   3. Left-join aggregates onto the spine (applicant count must not change), align train/test columns.
   4. `encoding.py`: missing indicators for high-missing numerics → median impute → one-hot **all** categoricals (no label encoding). Fit on train only; test uses `handle_unknown="ignore"`.

@@ -32,9 +32,7 @@ def _make_synthetic_training_data(
     # Encoded protected-attribute columns
     X["cat__CODE_GENDER_F"] = (rng.random(n_samples) < 0.66).astype(float)
     X["cat__CODE_GENDER_M"] = 1.0 - X["cat__CODE_GENDER_F"]
-    X["cat__NAME_EDUCATION_TYPE_Secondary"] = (
-        rng.random(n_samples) < 0.7
-    ).astype(float)
+    X["num__DAYS_BIRTH"] = -rng.integers(7500, 25000, size=n_samples).astype(float)
 
     ids = pd.Series(range(1, n_samples + 1), name=SK_ID_CURR)
     feature_names = list(X.columns)

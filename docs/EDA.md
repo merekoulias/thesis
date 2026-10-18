@@ -33,7 +33,7 @@ EDA was run **table by table**, separate from credit-scoring implementation:
 **Conventions carried into FE:**
 
 - Join keys: `SK_ID_CURR`, `SK_ID_PREV`, `SK_ID_BUREAU`.
-- Protected attributes (`CODE_GENDER`, `NAME_EDUCATION_TYPE`) are **included** in model features (one-hot encoded) and also retained raw in `fairness_groups_*` for audit. See [decisions.md](decisions.md).
+- Protected attributes (`CODE_GENDER`, age from `DAYS_BIRTH`) are **included** in model features (gender one-hot encoded, `DAYS_BIRTH` numeric) and also retained raw in `fairness_groups_`*, with `AGE_BAND` and `GENDER_AGE` labels, for audit. See [decisions.md](decisions.md).
 - Day/month fields are relative to the current application date.
 - One-to-many child tables must be aggregated to `SK_ID_CURR` (often via `SK_ID_PREV` / `SK_ID_BUREAU` first).
 - Column meanings: `data/HomeCredit_columns_description.csv`.
@@ -78,7 +78,7 @@ The dataset is a clean relational graph around current applications. Most auxili
 - **DAYS_EMPLOYED anomaly:** Sentinel `365243` (values >50 years employment); 55,374 train rows (18.0%) and 9,274 test rows (19.0%); anomaly default rate 5.4% vs 8.7% for non-anomaly rows. Those values must be replaced sentinel with `NaN`.
 - **Correlations with TARGET:** Strongest negative: `EXT_SOURCE_3` (−0.18), `EXT_SOURCE_2` (−0.16), `EXT_SOURCE_1` (−0.16). Strongest positive among top features: `DAYS_BIRTH` (+0.08). Exploratory only.
 - **Building redundancy:** 14 attribute groups have all three `_AVG`/`_MEDI`/`_MODE` variants; mean pairwise |r| often >0.98 — keep one variant per group in FE.
-- **Fairness audit inputs:** `CODE_GENDER` (4 `XNA` rows to drop later), `NAME_EDUCATION_TYPE`, and proxy candidates (`OCCUPATION_TYPE`, `ORGANIZATION_TYPE`, `NAME_INCOME_TYPE`, `REGION_`*, income/housing) for `07_protected_attributes.ipynb`.
+- **Fairness audit inputs:** `CODE_GENDER` (4 `XNA` rows, excluded before training and evaluation) and age from `DAYS_BIRTH`, plus proxy candidates (`NAME_EDUCATION_TYPE`, `OCCUPATION_TYPE`, `ORGANIZATION_TYPE`, `NAME_INCOME_TYPE`, `REGION_`*, income/housing) for `07_protected_attributes.ipynb`.
 
 
 
@@ -222,22 +222,35 @@ Credit-card history is informative but sparse. Prioritize availability indicator
 
 ## 07 — Protected attributes EDA
 
-**Scope:** Gender, education, gender × education intersections, and proxy candidates on application tables (fairness audit; no model fairness metrics on predictions in EDA).
+**Scope:** Gender, age, gender × 10-year age-band intersections, and proxy candidates on application tables (fairness audit; no model fairness metrics on predictions in EDA).
 
 ### Findings
 
-- **Protected attributes:** `CODE_GENDER` and `NAME_EDUCATION_TYPE` present in train and test. Included in model features (one-hot encoded in `X`); raw values also kept in `fairness_groups_*` for grouping.
-- **XNA:** 4 train rows with `CODE_GENDER == 'XNA'` (0 in test). Drop before fairness grouping.
-- **Gender (train, no XNA):** ~65.8% F / ~34.2% M. Raw default rates: F ~7.0%, M ~10.1% (max−min gap ≈ 3.1 pp). Descriptive outcome gap only — not a model fairness metric.
-- **Education (train, no XNA):** Secondary / secondary special dominates (~71%). Highest raw default: Lower secondary (~10.9%). Lowest: Academic degree (~1.8%, only 164 rows). Education max−min gap ≈ 9.1 pp.
-- **Intersectionality:** 10 gender × education cells after dropping XNA. Smallest: `M | Academic degree` (64) and `F | Academic degree` (100). Largest: `F | Secondary / secondary special` (~143k). Intersectional max−min default-rate gap ≈ 13.5 pp — larger than gender-only; report cell counts and consider worst-group metrics later. Minimum cell size / education merge still open.
-- **Train vs test:** Gender and education mixes align closely (small absolute share differences).
-- **Proxy candidates:** `OCCUPATION_TYPE`, `ORGANIZATION_TYPE`, `NAME_INCOME_TYPE`, `NAME_FAMILY_STATUS`, `NAME_HOUSING_TYPE`, and `REGION_RATING_*` associate with gender. Monitor in FE/fairness; exclude-vs-monitor policy still open.
-- **Not computed here:** Demographic parity / equal opportunity / equalized odds on model predictions, or mitigation.
+- **Protected attributes:** `CODE_GENDER` and age (`DAYS_BIRTH`, in years `−DAYS_BIRTH / 365.25`), present in train and test. Both are model features (gender one-hot, `DAYS_BIRTH` numeric); raw values plus `AGE_BAND` and `GENDER_AGE` labels are kept in `fairness_groups_`* for grouping.
+- **XNA:** 4 train rows with `CODE_GENDER == 'XNA'` (0.001%; 0 in test), all `TARGET = 0`. Excluded before training and evaluation as an **exclusion forced by the data**: no group metric can be estimated for 4 rows with no positives, and the rows are not redistributed to F/M because `XNA` is undefined. See [decisions.md](decisions.md).
+- **Gender (train, no XNA):** 65.8% F / 34.2% M. Raw default rates: F 7.00%, M 10.14% (gap 3.14 pp). Descriptive outcome gap only — not a model fairness metric.
+- **Age:** no missing values, no sentinel; ages 20.5–69.1 in train and 20.1–69.0 in test. Women are older (median 44.8 vs 40.3). Raw default rate falls with age: 11.44% (20–29), 9.59% (30–39), 7.64% (40–49), 6.12% (50–59), 4.92% (60–69); gap 6.53 pp.
+- **Intersectionality:** 10 gender × 10-year age-band cells ([20, 30) … [60, 70)). Smallest: `M | 60-69` (7,607 rows, 486 positives, 7,121 negatives); largest: `F | 30-39` (50,119). No cell is sparse, so no minimum cell size is applied. Men have the higher base rate in every band; max−min across cells 8.01 pp (`M | 20-29` 12.52% vs `F | 60-69` 4.51%), wider than the gender-only or age-only gap.
+
+
+| Age   | F: n   | F: base rate | M: n   | M: base rate |
+| ----- | ------ | ------------ | ------ | ------------ |
+| 20–29 | 25,649 | 10.62%       | 19,535 | 12.52%       |
+| 30–39 | 50,119 | 8.71%        | 32,211 | 10.97%       |
+| 40–49 | 49,636 | 6.67%        | 26,963 | 9.42%        |
+| 50–59 | 49,350 | 5.10%        | 18,743 | 8.81%        |
+| 60–69 | 27,694 | 4.51%        | 7,607  | 6.39%        |
+
+
+- **Train vs test:** gender, age-band and intersectional shares differ by at most about 1.2 pp.
+- **Proxy candidates:** for gender, `OCCUPATION_TYPE` (Cramér's V 0.51), `FLAG_OWN_CAR` (0.35), `ORGANIZATION_TYPE` (0.34); `NAME_EDUCATION_TYPE` is only weakly associated (0.03). For age, `ORGANIZATION_TYPE` (η 0.64) and `NAME_INCOME_TYPE` (η 0.62), both driven by pensioners (mean age 59.7, almost all with `ORGANIZATION_TYPE = XNA` and the `DAYS_EMPLOYED` sentinel); `EXT_SOURCE_1` (Spearman 0.60, 56% missing), `CNT_CHILDREN` (−0.37) and the `DAYS_`* tenure fields. Monitor in the fairness stage; exclude-vs-monitor policy still open.
+- **Not computed here:** demographic parity / equal opportunity / equalized odds on model predictions, thresholds, or mitigation.
+
+
 
 ### Short summary
 
-Protected attributes are usable for audit grouping after dropping 4 `XNA` rows. Raw outcome gaps exist by gender and widen for gender × education, with sparse Academic-degree cells. Proxies need later audit; descriptive gaps motivate fairness work but are not model fairness metrics.
+Protected attributes are usable for audit grouping after excluding 4 `XNA` rows. Raw outcome gaps exist by gender and by age and widen for gender × age; all 10 cells are large. Occupation, organization and income type relate to both gender and age, so proxies need later audit; descriptive gaps motivate fairness work but are not model fairness metrics.
 
 ---
 
@@ -253,8 +266,9 @@ Protected attributes are usable for audit grouping after dropping 4 `XNA` rows. 
 - Train/test application schemas align except `TARGET` (8.1% positive class).
 - High coverage for previous apps, installments, and POS/cash; medium for bureau; low for credit cards and bureau monthly balances.
 
+
+
 ### Not yet covered
 
-- Full feature engineering, null-importance selection, and model training (`fe.py` and later pipeline).
-- Fairness metrics on OOF predictions and mitigation (pre / in / post).
+- Fairness metrics on OOF predictions and mitigation (pre / in / post), in `src/fairness/`. Feature engineering and the baseline LightGBM scorer are implemented in `src/` ([feature_engineering.md](feature_engineering.md), [credit_scoring.md](credit_scoring.md)).
 
