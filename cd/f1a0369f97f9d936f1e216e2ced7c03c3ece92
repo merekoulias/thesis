@@ -1,0 +1,29 @@
+.cursor/skills/home-credit-eda-notebooks/SKILL.md
+  s_d7c42647daf17b::t_b5c04e56c1daa1 64
+analysis/notebooks/00_dataset_overview.ipynb
+  s_d7c42647daf17b::t_af0a96f6f8d90e 32,788,964
+docs/EDA.md
+  s_d7c42647daf17b::t_1dd38ec7c2595c 36,54,81,104,229,246
+docs/encoding.md
+  s_d7c42647daf17b::t_c21ce497ae2d84 19
+docs/glossary.md
+  s_d7c42647daf17b::t_fe796a99d7dfea 35-38,40,73-74,76-78
+docs/thesis-overview.md
+  s_d7c42647daf17b::t_f05b3d744c1a91 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cdf1a0369f97f9d936f1e216e2ced7c03c3ece92",
+  "prompts": {},
+  "sessions": {
+    "s_d7c42647daf17b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fe46740c-95f1-4c08-9153-244df785b9a1",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
