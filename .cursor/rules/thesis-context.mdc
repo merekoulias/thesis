@@ -20,7 +20,7 @@ Bias in ML credit scoring and bias mitigation (pre-, in-, and post-processing). 
 - **Goal:** one credit scorer built from all relational tables → fairness audit → mitigation. Performance is nice-to-have, not an RQ.
 
 ## Fairness work (not yet implemented)
-- Metrics (default): demographic parity, equal opportunity, equalized odds; worst-group disparity over gender × 10-year age bands.
+- Metrics: primary = equal opportunity (FPR gap) and equalized odds (FPR + FNR gaps); secondary = approval-rate difference and disparate impact ratio; diagnostic = calibration by group. Over gender, age bands and gender × 10-year age cells, with worst-group gaps. Details in `docs/decisions.md`.
 - Mitigation: one technique per stage (pre/in/post) — exact methods TBD.
 - Use out-of-fold predictions for fairness evaluation. One group-blind threshold per model, flagging the base-rate share (8.07%); report approval rates (`Ŷ = 0`). Details in `docs/decisions.md`.
 
