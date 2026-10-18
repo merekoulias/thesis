@@ -1,0 +1,21 @@
+.cursor/rules/thesis-context.mdc
+  s_81db573ec907cd::t_51b3afb3a01b2b 23,25
+CLAUDE.md
+  s_81db573ec907cd::t_47feae2c5046dd 49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "def42cca4f2cc1a0acb2c035370a05cfe8df171f",
+  "prompts": {},
+  "sessions": {
+    "s_81db573ec907cd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "63b02b3d-3f99-4e45-ab06-b8b24427130c",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
