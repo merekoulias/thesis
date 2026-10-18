@@ -33,7 +33,7 @@ EDA was run **table by table**, separate from credit-scoring implementation:
 **Conventions carried into FE:**
 
 - Join keys: `SK_ID_CURR`, `SK_ID_PREV`, `SK_ID_BUREAU`.
-- Protected attributes (`CODE_GENDER`, age from `DAYS_BIRTH`) are **included** in model features (gender one-hot encoded, `DAYS_BIRTH` numeric) and also retained raw in `fairness_groups_`*, with `AGE_BAND` and `GENDER_AGE` labels, for audit. See [decisions.md](decisions.md).
+- Protected attributes (`CODE_GENDER`, age from `DAYS_BIRTH`) are **included** in model features (gender one-hot encoded, `DAYS_BIRTH` numeric) and also retained raw in `fairness_groups_*`, with `AGE_BAND` and `GENDER_AGE` labels, for audit. See [decisions.md](decisions.md).
 - Day/month fields are relative to the current application date.
 - One-to-many child tables must be aggregated to `SK_ID_CURR` (often via `SK_ID_PREV` / `SK_ID_BUREAU` first).
 - Column meanings: `data/HomeCredit_columns_description.csv`.
@@ -51,7 +51,7 @@ Protected-attribute deep dive is in `07_protected_attributes.ipynb`.
 ### Findings
 
 - **Tables loaded:** 9 CSVs spanning 58.9M total rows. Largest: `bureau_balance` (27.3M), `installments_payments` (13.6M), `POS_CASH_balance` (10.0M). Application tables: **307,511 train** and **48,744 test** clients.
-- **Relational pattern:** `application_`* → `bureau` / `previous_application` (one-to-many via `SK_ID_CURR`); `bureau` → `bureau_balance` (via `SK_ID_BUREAU`); `previous_application` → installments, POS/cash, and credit card (one-to-many via `SK_ID_PREV`).
+- **Relational pattern:** `application_*` → `bureau` / `previous_application` (one-to-many via `SK_ID_CURR`); `bureau` → `bureau_balance` (via `SK_ID_BUREAU`); `previous_application` → installments, POS/cash, and credit card (one-to-many via `SK_ID_PREV`).
 - **Coverage (train clients):** Highest — `installments_payments` (94.8%), `previous_application` (94.7%), `POS_CASH_balance` (94.1%). Lowest — `credit_card_balance` (28.3%), `bureau_balance` via bureau (30.0%). Direct `bureau` coverage: 85.7%.
 - **Multiplicity:** Covered clients typically have several bureau/previous-app records (median 4) and many installment/POS rows (median 22–25 per client).
 - **Train vs test:** 121 shared columns; **only** `TARGET` **is train-only**. Schemas align for feature engineering.
@@ -78,7 +78,7 @@ The dataset is a clean relational graph around current applications. Most auxili
 - **DAYS_EMPLOYED anomaly:** Sentinel `365243` (values >50 years employment); 55,374 train rows (18.0%) and 9,274 test rows (19.0%); anomaly default rate 5.4% vs 8.7% for non-anomaly rows. Those values must be replaced sentinel with `NaN`.
 - **Correlations with TARGET:** Strongest negative: `EXT_SOURCE_3` (−0.18), `EXT_SOURCE_2` (−0.16), `EXT_SOURCE_1` (−0.16). Strongest positive among top features: `DAYS_BIRTH` (+0.08). Exploratory only.
 - **Building redundancy:** 14 attribute groups have all three `_AVG`/`_MEDI`/`_MODE` variants; mean pairwise |r| often >0.98 — keep one variant per group in FE.
-- **Fairness audit inputs:** `CODE_GENDER` (4 `XNA` rows, excluded before training and evaluation) and age from `DAYS_BIRTH`, plus proxy candidates (`NAME_EDUCATION_TYPE`, `OCCUPATION_TYPE`, `ORGANIZATION_TYPE`, `NAME_INCOME_TYPE`, `REGION_`*, income/housing) for `07_protected_attributes.ipynb`.
+- **Fairness audit inputs:** `CODE_GENDER` (4 `XNA` rows, excluded before training and evaluation) and age from `DAYS_BIRTH`, plus proxy candidates (`NAME_EDUCATION_TYPE`, `OCCUPATION_TYPE`, `ORGANIZATION_TYPE`, `NAME_INCOME_TYPE`, `REGION_*`, income/housing) for `07_protected_attributes.ipynb`.
 
 
 
@@ -101,7 +101,7 @@ Application tables are ID-clean and train/test aligned. Main FE issues are class
 - **Coverage:** 85.7% of train and 86.8% of test clients have at least one bureau credit. Clients with no bureau history have a higher raw train default rate (10.1% vs 7.7%). Only 45% of bureau credits have monthly balance history; 95% of distinct balance credit IDs join back to `bureau`.
 - **Status / type:** Credits are mostly Closed (63%) or Active (37%); Bad debt is tiny. Dominant types: Consumer credit and Credit card. Currency is almost entirely `currency 1`.
 - **Overdue rarity:** `CREDIT_DAY_OVERDUE > 0` on 0.25% of bureau rows. In balance history, DPD statuses `1`–`5` are 1.3% of months but appear on 103k credits — useful after aggregation. Status codes: `C` closed, `0` no DPD, `X` unknown, `1`–`5` DPD buckets.
-- **Anomalies:** A few `DAYS_`* values outside a 100-year window (notably `DAYS_CREDIT_ENDDATE`). Some negative `AMT_CREDIT_SUM_DEBT` / `AMT_CREDIT_SUM_LIMIT` values (credit-card rows; likely sign/encoding quirks) — clip or flag in FE.
+- **Anomalies:** A few `DAYS_*` values outside a 100-year window (notably `DAYS_CREDIT_ENDDATE`). Some negative `AMT_CREDIT_SUM_DEBT` / `AMT_CREDIT_SUM_LIMIT` values (credit-card rows; likely sign/encoding quirks) — clip or flag in FE.
 - **Balance horizon:** `MONTHS_BALANCE` ranges from 0 to −96; median history length per credit with balances is 26 months.
 - **FE implications:** Aggregate bureau to `SK_ID_CURR` (counts, active share, debt sums, max overdue). Aggregate `bureau_balance` to `SK_ID_BUREAU` first (late-month rate, recent `STATUS`), then to client. Add indicators for missing bureau history and missing balance history.
 - **Leakage / fairness:** Day fields are application-relative. Bureau presence may relate to thin-file / socioeconomic factors — audit later; do not use as a protected-attribute model feature.
@@ -226,7 +226,7 @@ Credit-card history is informative but sparse. Prioritize availability indicator
 
 ### Findings
 
-- **Protected attributes:** `CODE_GENDER` and age (`DAYS_BIRTH`, in years `−DAYS_BIRTH / 365.25`), present in train and test. Both are model features (gender one-hot, `DAYS_BIRTH` numeric); raw values plus `AGE_BAND` and `GENDER_AGE` labels are kept in `fairness_groups_`* for grouping.
+- **Protected attributes:** `CODE_GENDER` and age (`DAYS_BIRTH`, in years `−DAYS_BIRTH / 365.25`), present in train and test. Both are model features (gender one-hot, `DAYS_BIRTH` numeric); raw values plus `AGE_BAND` and `GENDER_AGE` labels are kept in `fairness_groups_*` for grouping.
 - **XNA:** 4 train rows with `CODE_GENDER == 'XNA'` (0.001%; 0 in test), all `TARGET = 0`. Excluded before training and evaluation as an **exclusion forced by the data**: no group metric can be estimated for 4 rows with no positives, and the rows are not redistributed to F/M because `XNA` is undefined. See [decisions.md](decisions.md).
 - **Gender (train, no XNA):** 65.8% F / 34.2% M. Raw default rates: F 7.00%, M 10.14% (gap 3.14 pp). Descriptive outcome gap only — not a model fairness metric.
 - **Age:** no missing values, no sentinel; ages 20.5–69.1 in train and 20.1–69.0 in test. Women are older (median 44.8 vs 40.3). Raw default rate falls with age: 11.44% (20–29), 9.59% (30–39), 7.64% (40–49), 6.12% (50–59), 4.92% (60–69); gap 6.53 pp.
@@ -243,7 +243,7 @@ Credit-card history is informative but sparse. Prioritize availability indicator
 
 
 - **Train vs test:** gender, age-band and intersectional shares differ by at most about 1.2 pp.
-- **Proxy candidates:** for gender, `OCCUPATION_TYPE` (Cramér's V 0.51), `FLAG_OWN_CAR` (0.35), `ORGANIZATION_TYPE` (0.34); `NAME_EDUCATION_TYPE` is only weakly associated (0.03). For age, `ORGANIZATION_TYPE` (η 0.64) and `NAME_INCOME_TYPE` (η 0.62), both driven by pensioners (mean age 59.7, almost all with `ORGANIZATION_TYPE = XNA` and the `DAYS_EMPLOYED` sentinel); `EXT_SOURCE_1` (Spearman 0.60, 56% missing), `CNT_CHILDREN` (−0.37) and the `DAYS_`* tenure fields. Monitor in the fairness stage; exclude-vs-monitor policy still open.
+- **Proxy candidates:** for gender, `OCCUPATION_TYPE` (Cramér's V 0.51), `FLAG_OWN_CAR` (0.35), `ORGANIZATION_TYPE` (0.34); `NAME_EDUCATION_TYPE` is only weakly associated (0.03). For age, `ORGANIZATION_TYPE` (η 0.64) and `NAME_INCOME_TYPE` (η 0.62), both driven by pensioners (mean age 59.7, almost all with `ORGANIZATION_TYPE = XNA` and the `DAYS_EMPLOYED` sentinel); `EXT_SOURCE_1` (Spearman 0.60, 56% missing), `CNT_CHILDREN` (−0.37) and the `DAYS_*` tenure fields. Monitor in the fairness stage; no exclusion decided.
 - **Not computed here:** demographic parity / equal opportunity / equalized odds on model predictions, thresholds, or mitigation.
 
 

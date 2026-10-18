@@ -32,11 +32,12 @@ See [`dataset-desc.md`](../dataset-desc.md) for full descriptions.
 
 | Term | Column | Role in this project |
 |------|--------|----------------------|
-| Gender | `CODE_GENDER` | Mandatory protected attribute (`M`, `F`; drop `XNA`) |
-| Education | `NAME_EDUCATION_TYPE` | Protected attribute for intersectionality with gender |
-| Intersectional group | gender × education | Subgroup for disaggregated fairness metrics |
+| Gender | `CODE_GENDER` | Mandatory protected attribute (`M`, `F`; the 4 `XNA` rows are excluded) |
+| Age | `DAYS_BIRTH` | Protected attribute; age in years is `−DAYS_BIRTH / 365.25` |
+| Age band | `AGE_BAND` | 10-year band, left-closed: `20-29`, `30-39`, `40-49`, `50-59`, `60-69` |
+| Intersectional group | `GENDER_AGE` | Gender × age band (10 cells); subgroup for disaggregated fairness metrics |
 
-Protected attributes are **not** model features — used only for audit and mitigation.
+Protected attributes are **included** as model features (gender one-hot, `DAYS_BIRTH` numeric) and also kept raw in `fairness_groups_*` for grouping and mitigation. Education (`NAME_EDUCATION_TYPE`) is an ordinary model feature and a proxy candidate, not a protected attribute.
 
 ## Feature suffix conventions
 
@@ -69,10 +70,12 @@ From Kaggle discussions ([`dataset-annotation-meanings.md`](../dataset-annotatio
 
 | Metric | Abbreviation | What it compares across groups |
 |--------|--------------|-------------------------------|
-| Demographic parity | DP | Positive prediction rate (approval rate) |
-| Equal opportunity | EO | True positive rate among creditworthy applicants |
+| Demographic parity | DP | Approval rate, `P(Ŷ = 0 \| group)` |
+| Equal opportunity | EO | Approval rate among applicants without payment difficulties (`Y = 0`), i.e. equal FPR across groups when `Ŷ = 1` means flagged |
 | Equalized odds | EOd | Both TPR and FPR across groups |
-| Worst-group disparity | — | Maximum fairness gap over gender×education subgroups |
+| Worst-group disparity | — | Maximum fairness gap (max−min) over the gender × age-band cells |
+
+Conventions: `Y = 1` = payment difficulties; `Ŷ = 1` = flagged as high risk, `Ŷ = 0` = credit granted. Formulas use flags; selection rates are reported as approval rates. Each model gets one group-blind threshold that flags the base-rate share of applications (8.07%). See [decisions.md](decisions.md).
 
 ## Output paths
 

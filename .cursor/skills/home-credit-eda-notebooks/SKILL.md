@@ -61,7 +61,7 @@ Do not include:
 - Fairness metrics or mitigation.
 - Kaggle submission logic.
 
-Protected attributes such as `CODE_GENDER` and `NAME_EDUCATION_TYPE` are audit/grouping variables only. Do not propose them as model features.
+Protected attributes (`CODE_GENDER` and age from `DAYS_BIRTH`) are included as model features and also used for fairness grouping (gender × 10-year age bands), per `docs/decisions.md`. `NAME_EDUCATION_TYPE` is an ordinary feature and a proxy candidate. Do not propose excluding the protected attributes from the model.
 
 ## Analyst Style
 

@@ -8,7 +8,7 @@ Deliverables: **code repository**, **written thesis**, and **presentation**. Int
 
 ## Research questions
 
-1. **Bias detection:** To what extent does the credit scoring model exhibit fairness disparities across gender and gender×education, measured by demographic parity, equal opportunity, and equalized odds?
+1. **Bias detection:** To what extent does the credit scoring model exhibit fairness disparities across gender and gender × age (10-year age bands), measured by demographic parity, equal opportunity, and equalized odds?
 2. **Mitigation:** How do pre-, in-, and post-processing mitigation techniques affect fairness metrics relative to predictive performance? Which category of techniques (pre-, in-, post-) do better?
 3. **Intersectionality:** Repeat the mitigation step fro intersectional groups.
 

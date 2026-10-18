@@ -16,7 +16,7 @@ After aggregation, each applicant is one row, but columns are still mixed:
 
 This pipeline builds a **generic numeric matrix**: median-imputed numerics + one-hot categoricals, with train/test column alignment. That matrix is what `src/models/` will consume later.
 
-Protected attributes are encoded into `X_train` and `X_test` (fit on train only). Raw gender / education / intersection labels are kept separately in `fairness_groups_*` for fairness evaluation.
+Protected attributes are encoded into `X_train` and `X_test` (fit on train only). Gender is one-hot encoded; age enters as numeric `DAYS_BIRTH`. Raw gender, age, 10-year age band and gender × age labels are kept separately in `fairness_groups_*` for fairness evaluation.
 
 ---
 
