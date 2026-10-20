@@ -256,6 +256,26 @@ Protected attributes are usable for audit grouping after excluding 4 `XNA` rows.
 
 
 
+## 08 — Pre-modelling bias audit
+
+**Scope:** Phase 1, Step 5. Group-level disparities in outcomes, representation, missingness and proxies in the labelled data, with 95% intervals, for gender, age band and the 10 gender × age cells. Repeats the Step 5 parts of `07` and uses the stage-1 artifacts in `artifacts/features/`. Helpers and the auxiliary gender classifier: `analysis/helpers/data_audit.py`.
+
+### Findings
+
+- **Sample:** 307,507 rows; groups match `fairness_groups_train.parquet` exactly. Women are 65.8% of applicants and older; their share rises from 56.8% (20–29) to 78.5% (60–69).
+- **Outcomes:** default F 7.00% [6.89, 7.11] vs M 10.14% [9.96, 10.32]; gap F − M −3.14 pp [−3.36, −2.93]; ratio M / F 1.45; repayment ratio M / F 0.966. Age gap 20–29 − 60–69: 6.53 pp [6.16, 6.90]. Cells: max−min 8.01 pp [7.51, 8.56]; Lum et al.'s correction is negligible at this cell size.
+- **Stratified:** the gender gap is negative in every age band (−1.9 to −3.7 pp) and every PTI quintile (−2.0 to −4.0 pp). Mantel-Haenszel odds ratio M vs F: 1.50 unstratified, 1.39 by age band, 1.53 by PTI quintile, 1.42 by both.
+- **Missingness:** structural and uneven. No car (`OWN_CAR_AGE` missing) 77.8% F vs 43.2% M; `DAYS_EMPLOYED` sentinel / `ORGANIZATION_TYPE = XNA` 22.4% F vs 9.6% M, up to 85% in 60–69; `EXT_SOURCE_1` missing rises with age (37–81%); no bureau record for about 20% of 20–29. Missingness relates to default, and more strongly for men (e.g. no car: +4.2 pp M vs +1.5 pp F).
+- **Proxies:** `EXT_SOURCE_1`, `DAYS_EMPLOYED`, `OCCUPATION_TYPE`, `ORGANIZATION_TYPE` and `NAME_INCOME_TYPE` are associated with gender or age and with `TARGET`; the strongest predictors (`EXT_SOURCE_2/3`) are weakly group-associated. Gender is predictable from the non-protected engineered features with OOF AUC 0.907 and balanced error rate 0.175, below Feldman et al.'s four-fifths threshold (0.384), so the data admits disparate impact.
+
+### Short summary
+
+The labelled data shows stable gender and age differences in default that are not explained by age composition or PTI, structural missingness concentrated in older applicants and women, and features that jointly encode gender. Observational data, a constructed label and selective labels mean these cannot be attributed to historical bias; they are the baseline for Step 6.
+
+---
+
+
+
 ## Overall summary (for FE and thesis)
 
 
