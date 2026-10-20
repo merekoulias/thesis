@@ -1,0 +1,39 @@
+.cursor/rules/thesis-context.mdc
+  s_8cbf177917f949::t_4f725b4801c0cb 24-25
+CLAUDE.md
+  s_ef49d4979445dc::t_0a6941f8780a24 50
+analysis/helpers/__init__.py
+  s_ef49d4979445dc::t_2d14e135546d31 1
+analysis/helpers/data_audit.py
+  s_ef49d4979445dc::t_2255b1544d245e 1-512
+analysis/notebooks/README.md
+  s_ef49d4979445dc::t_bc0cde653d0aa8 20,22,29
+docs/EDA.md
+  s_ef49d4979445dc::t_2fa11bfb7d8cb8 259-278
+tests/test_data_audit_helpers.py
+  s_ef49d4979445dc::t_63fd6814f8fda4 1-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b0e7701ddfebcca7c23f2f6efdadc8d587b7385e",
+  "prompts": {},
+  "sessions": {
+    "s_8cbf177917f949": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "98826d21-6f86-498b-af14-90e7ab2f1b67",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    },
+    "s_ef49d4979445dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6320e937-239d-426c-9bb4-927e9423ebaf",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
