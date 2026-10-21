@@ -1,0 +1,19 @@
+.cursor/plans/multi-model-nested-cv.md
+  s_3a9a6afe819747::t_57f22bd310803a 1-1918
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "03a9797a097933458f08d0dc92bfafac37d56cbe",
+  "prompts": {},
+  "sessions": {
+    "s_3a9a6afe819747": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1a774cd8-e689-4c96-b9c2-8b0b58aeb914",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
