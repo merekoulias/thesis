@@ -1,0 +1,35 @@
+.cursor/plans/multi-model-nested-cv.md
+  s_0ac2480bdf1125::t_8251d8681ae804 22
+src/models/metrics.py
+  s_0ac2480bdf1125::t_b6084275f3406d 1-124
+src/models/nested.py
+  s_0ac2480bdf1125::t_35f8cd8d1df784 1-478
+tests/test_models_nested.py
+  s_0ac2480bdf1125::t_77922488624356 1-275
+tests/test_models_metrics.py
+  s_3a9a6afe819747::t_03c2f08b3ea5ae 1-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "40adbcfac8d12085119712508b2c9e5fe9120a8d",
+  "prompts": {},
+  "sessions": {
+    "s_0ac2480bdf1125": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8ccb7455-3db7-4cd1-a83f-52ec5935641d",
+        "model": "composer-2.5"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    },
+    "s_3a9a6afe819747": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1a774cd8-e689-4c96-b9c2-8b0b58aeb914",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
