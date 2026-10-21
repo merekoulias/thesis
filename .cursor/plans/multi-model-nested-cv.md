@@ -14,7 +14,7 @@ Phase commits are found with `git log --oneline --grep "phase <N>"` (no hash col
 
 | Phase | Title | Status (`todo` / `in progress` / `done`) | Review verdict | Notes |
 | ----- | ----- | ---------------------------------------- | -------------- | ----- |
-| 0 | Setup, formatter configuration and baseline snapshot | done | | BASE `03a9797`; commits `5c5d351` (plan+formatters), `2926c22` (black/isort, 15 files); pytest 28 passed before/after (7.47s / 7.29s); features 493×307507 verified; legacy `oof_roc_auc` 0.7841216640666608; `configs/models/` created empty; step 1: clean tree (plan already tracked, not only untracked plans) |
+| 0 | Setup, formatter configuration and baseline snapshot | done | PASS WITH NITS (Claude Code, 2026-10-21: extra log-only commit `20a4e25`; step 1 deviation benign; CLAUDE.md "No linter config is checked in" stale → Phase 9) | BASE `03a9797`; commits `5c5d351` (plan+formatters), `2926c22` (black/isort, 15 files); pytest 28 passed before/after (7.47s / 7.29s); features 493×307507 verified; legacy `oof_roc_auc` 0.7841216640666608; `configs/models/` created empty; step 1: clean tree (plan already tracked, not only untracked plans) |
 | 1 | Types, config files, settings loader, candidate sampler | todo | | |
 | 2 | `SignedLogStandardScaler` preprocessing | todo | | |
 | 3 | Model registry and `fit_predict` adapter | todo | | |
