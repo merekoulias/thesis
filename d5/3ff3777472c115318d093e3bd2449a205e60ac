@@ -1,0 +1,39 @@
+src/models/search.py
+  s_a7c944a5ffe283::t_a816ff61fc2319 1-179
+src/models/settings.py
+  s_a7c944a5ffe283::t_5c8726eb3fa004 1-226
+.cursor/plans/multi-model-nested-cv.md
+  s_a7c944a5ffe283::t_5150a03d225049 18
+configs/models/cv.yaml
+  s_a7c944a5ffe283::t_41ff95a1526326 1-7
+configs/models/cv_smoke.yaml
+  s_a7c944a5ffe283::t_37a629dd79089a 1-6
+configs/models/lgbm.yaml
+  s_a7c944a5ffe283::t_688f18faeec44d 1-27
+configs/models/logreg.yaml
+  s_a7c944a5ffe283::t_2fd12844c9d4e0 1-12
+configs/models/mlp.yaml
+  s_a7c944a5ffe283::t_8ddf8bc1ff02c4 1-25
+configs/models/rf.yaml
+  s_a7c944a5ffe283::t_febf5727a71d95 1-18
+src/models/types.py
+  s_a7c944a5ffe283::t_8907ae5d513c35 4,61-161
+tests/test_models_settings.py
+  s_a7c944a5ffe283::t_3c36b9b2958071 1-271
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d53ff3777472c115318d093e3bd2449a205e60ac",
+  "prompts": {},
+  "sessions": {
+    "s_a7c944a5ffe283": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5f89de6c-772f-4cf8-bc37-9a0cf057aa74",
+        "model": "composer-2.5"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
