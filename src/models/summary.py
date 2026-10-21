@@ -99,7 +99,7 @@ def _format_markdown_table(rows: List[Dict[str, Any]]) -> str:
 
 
 def write_summary_csv(rows: List[Dict[str, Any]], path: Path) -> None:
-    """Write summary rows to a CSV file.
+    """Write summary rows to a CSV file (floats at full precision).
 
     Args:
         rows: Summary rows from ``collect_summary_rows``.
@@ -110,11 +110,7 @@ def write_summary_csv(rows: List[Dict[str, Any]], path: Path) -> None:
         writer = csv.DictWriter(f, fieldnames=SUMMARY_COLUMNS)
         writer.writeheader()
         for row in rows:
-            out = dict(row)
-            for key in SUMMARY_COLUMNS:
-                if key not in ("model", "rank") and isinstance(out[key], float):
-                    out[key] = f"{out[key]:.4f}"
-            writer.writerow({k: out[k] for k in SUMMARY_COLUMNS})
+            writer.writerow({k: row[k] for k in SUMMARY_COLUMNS})
 
 
 def main(argv: Optional[List[str]] = None) -> None:

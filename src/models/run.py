@@ -18,7 +18,10 @@ from sklearn.model_selection import train_test_split
 
 from src.models.io import load_training_data
 from src.models.nested import run_nested_cv
+from src.models.registry import MODEL_REGISTRY
 from src.models.runs import (
+    DEFAULT_VARIANT,
+    LOG_FILE,
     METRICS_FILE,
     TUNING_DIR,
     run_dir_for,
@@ -30,7 +33,12 @@ from src.models.settings import (
     load_cv_settings,
     load_model_config,
 )
-from src.models.types import CVSettings, ModelConfig, TrainingData
+from src.models.types import (
+    INNER_SCORES_FILE,
+    CVSettings,
+    ModelConfig,
+    TrainingData,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,16 +47,24 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _git_output(args: List[str]) -> str:
+    out = subprocess.run(
+        ["git", *args],
+        capture_output=True,
+        text=True,
+        check=True,
+        cwd=_repo_root(),
+    )
+    return out.stdout.strip()
+
+
 def _git_commit() -> str:
+    """Return HEAD's hash, suffixed ``-dirty`` if tracked files have changes."""
     try:
-        out = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=True,
-            cwd=_repo_root(),
-        )
-        return out.stdout.strip()
+        commit = _git_output(["rev-parse", "HEAD"])
+        if _git_output(["status", "--porcelain", "--untracked-files=no"]):
+            commit += "-dirty"
+        return commit
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "unknown"
 
@@ -109,6 +125,27 @@ def _cv_settings_dict(cv_settings: CVSettings) -> Dict[str, Any]:
     return asdict(cv_settings)
 
 
+def _attach_log_file(log_path: Path) -> List[logging.Handler]:
+    """Send INFO logs to stderr and ``log_path`` (append) until detached."""
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    handlers: List[logging.Handler] = [
+        logging.StreamHandler(),
+        logging.FileHandler(log_path, mode="a", encoding="utf-8"),
+    ]
+    root = logging.getLogger()
+    for handler in handlers:
+        handler.setFormatter(formatter)
+        root.addHandler(handler)
+    return handlers
+
+
+def _detach_handlers(handlers: List[logging.Handler]) -> None:
+    root = logging.getLogger()
+    for handler in handlers:
+        root.removeHandler(handler)
+        handler.close()
+
+
 def main(argv: Optional[List[str]] = None) -> None:
     """Run nested CV for one model and write a run directory.
 
@@ -121,7 +158,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     parser.add_argument(
         "--model",
         required=True,
-        choices=["lgbm", "rf", "logreg", "mlp"],
+        choices=sorted(MODEL_REGISTRY),
         help="Registry model name.",
     )
     parser.add_argument(
@@ -182,60 +219,57 @@ def main(argv: Optional[List[str]] = None) -> None:
             f"--model {args.model} does not match model config name {model_config.name}"
         )
 
+    run_dir = run_dir_for(runs_dir, model_config.name)
+    existing = (run_dir / METRICS_FILE).exists() or (run_dir / TUNING_DIR).exists()
+    if existing and not (args.overwrite or args.resume):
+        print(
+            f"Run directory exists: {run_dir}. Use --resume or --overwrite.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
     data = load_training_data(args.features_dir)
     max_rows: Optional[int] = args.max_rows
     if max_rows is not None:
-        if max_rows < 2 or max_rows > len(data.y):
-            parser.error(f"--max-rows must be between 2 and {len(data.y)}")
+        if not 2 <= max_rows < len(data.y):
+            parser.error(f"--max-rows must be between 2 and {len(data.y) - 1}")
         data = _subsample_training_data(data, max_rows, cv_settings.seed)
 
-    run_dir = run_dir_for(runs_dir, model_config.name)
-    if (run_dir / METRICS_FILE).exists() or (run_dir / TUNING_DIR).exists():
-        if args.overwrite:
-            shutil.rmtree(run_dir)
-        elif not args.resume:
-            print(
-                f"Run directory exists: {run_dir}. Use --resume or --overwrite.",
-                file=sys.stderr,
-            )
-            raise SystemExit(1)
+    if existing and args.overwrite:
+        shutil.rmtree(run_dir)
+    resumed = (run_dir / TUNING_DIR / INNER_SCORES_FILE).exists() and args.resume
 
     run_dir.mkdir(parents=True, exist_ok=True)
-    log_path = run_dir / "run.log"
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-        force=True,
-    )
     root = logging.getLogger()
-    handler = logging.FileHandler(log_path, mode="a", encoding="utf-8")
-    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-    root.addHandler(handler)
+    previous_level = root.level
+    root.setLevel(logging.INFO)
+    handlers = _attach_log_file(run_dir / LOG_FILE)
+    try:
+        started_at = datetime.now(timezone.utc).isoformat()
+        result = run_nested_cv(
+            data,
+            model_config,
+            cv_settings,
+            checkpoint_dir=run_dir / TUNING_DIR,
+            resume=args.resume,
+        )
+        finished_at = datetime.now(timezone.utc).isoformat()
+    finally:
+        _detach_handlers(handlers)
+        root.setLevel(previous_level)
 
-    started_at = datetime.now(timezone.utc).isoformat()
-    n_samples = len(data.y)
-    n_features = data.X.shape[1]
-
-    result = run_nested_cv(
-        data,
-        model_config,
-        cv_settings,
-        checkpoint_dir=run_dir / TUNING_DIR,
-        resume=args.resume,
-    )
-
-    finished_at = datetime.now(timezone.utc).isoformat()
     run_config: Dict[str, Any] = {
         "model": model_config.name,
-        "variant": "baseline",
+        "variant": DEFAULT_VARIANT,
         "cv_settings": _cv_settings_dict(cv_settings),
         "model_config": _model_config_dict(model_config),
         "features_dir": str(args.features_dir),
-        "n_samples": n_samples,
-        "n_features": n_features,
+        "n_samples": len(data.y),
+        "n_features": data.X.shape[1],
         "max_rows": max_rows,
         "git_commit": _git_commit(),
         "versions": _package_versions(),
+        "resumed": resumed,
         "started_at": started_at,
         "finished_at": finished_at,
     }

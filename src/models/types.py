@@ -159,3 +159,20 @@ INNER_SCORE_COLUMNS: List[str] = [
     "best_iteration",
     "fit_seconds",
 ]
+
+# Tuning checkpoint / run-directory file names (shared by nested.py and runs.py).
+CANDIDATES_FILE = "candidates.json"
+INNER_SCORES_FILE = "inner_scores.csv"
+FINGERPRINT_FILE = "fingerprint.json"
+
+
+def candidates_payload(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return the ``candidates.json`` content: one id + params entry per candidate.
+
+    Args:
+        candidates: Candidate parameter dicts, index = candidate id.
+
+    Returns:
+        List of ``{"candidate_id": i, "params": candidate}``.
+    """
+    return [{"candidate_id": i, "params": c} for i, c in enumerate(candidates)]

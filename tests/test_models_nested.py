@@ -237,6 +237,25 @@ def test_resume_gives_identical_result(
     )
 
 
+def test_resumed_runtime_includes_earlier_tuning_seconds(
+    make_training_data, tiny_model_configs, tmp_path
+):
+    data = make_training_data(n_samples=300, seed=8)
+    config = tiny_model_configs["rf"]
+    ckpt = tmp_path / "tuning"
+    first = _run_nested(data, config, checkpoint_dir=ckpt, resume=False)
+    carried = pd.read_csv(ckpt / "inner_scores.csv")["fit_seconds"].sum()
+
+    def no_tuning(*args, **kwargs):
+        raise AssertionError("every pair is finished; nothing may be re-tuned")
+
+    with mock.patch.object(nested_mod, "cross_val_predict_model", no_tuning):
+        resumed = _run_nested(data, config, checkpoint_dir=ckpt, resume=True)
+
+    assert resumed.runtime_seconds >= carried
+    assert resumed.runtime_seconds >= 0.5 * first.runtime_seconds
+
+
 def test_resume_with_changed_candidates_raises(
     make_training_data, tiny_model_configs, tmp_path
 ):

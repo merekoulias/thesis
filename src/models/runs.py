@@ -7,9 +7,15 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
 
+from src.constants import TARGET_COL
 from src.models.metrics import reference_metrics, summarize_folds
-from src.models.nested import CANDIDATES_FILE, INNER_SCORES_FILE
-from src.models.types import NestedCVResult, RankedRun
+from src.models.types import (
+    CANDIDATES_FILE,
+    INNER_SCORES_FILE,
+    NestedCVResult,
+    RankedRun,
+    candidates_payload,
+)
 
 PathLike = Union[str, Path]
 
@@ -19,6 +25,7 @@ METRICS_FILE = "metrics.json"
 SELECTED_PARAMS_FILE = "selected_params.json"
 RUN_CONFIG_FILE = "run_config.json"
 IMPORTANCE_FILE = "feature_importance.parquet"
+LOG_FILE = "run.log"
 TUNING_DIR = "tuning"
 ROBUSTNESS_DIR = "robustness"
 RANKINGS_FILE = "rankings.json"
@@ -63,24 +70,16 @@ def run_dir_for(
     return Path(runs_dir) / model_name / variant
 
 
-def _json_default(obj: Any) -> Any:
-    if isinstance(obj, (np.integer,)):
-        return int(obj)
-    if isinstance(obj, (np.floating,)):
-        return float(obj)
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
-
-
 def _to_jsonable(obj: Any) -> Any:
     if isinstance(obj, dict):
         return {str(k): _to_jsonable(v) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_to_jsonable(v) for v in obj]
-    if isinstance(obj, (np.integer,)):
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, np.integer):
         return int(obj)
-    if isinstance(obj, (np.floating,)):
+    if isinstance(obj, np.floating):
         return float(obj)
     if isinstance(obj, np.ndarray):
         return obj.tolist()
@@ -90,12 +89,8 @@ def _to_jsonable(obj: Any) -> Any:
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
-        json.dump(_to_jsonable(payload), f, indent=2, default=_json_default)
+        json.dump(_to_jsonable(payload), f, indent=2, allow_nan=False)
         f.write("\n")
-
-
-def _candidates_payload(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return [{"candidate_id": i, "params": c} for i, c in enumerate(candidates)]
 
 
 def _rankings_payload(result: NestedCVResult) -> List[Dict[str, Any]]:
@@ -134,7 +129,7 @@ def build_metrics_dict(
         Metrics dictionary with keys in ``METRICS_JSON_KEYS`` order.
     """
     oof = ranked.oof_predictions
-    y = oof["TARGET"].to_numpy()
+    y = oof[TARGET_COL].to_numpy()
     refs = reference_metrics(y)
     fold_aucs = ranked.fold_roc_aucs
     summary = summarize_folds(ranked.fold_metrics)
@@ -200,7 +195,7 @@ def save_nested_run(
         run_config: Metadata written to run_config.json (must include ``n_features``).
 
     Returns:
-        Resolved path to the run directory.
+        Path to the run directory.
     """
     out = Path(run_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -210,7 +205,7 @@ def save_nested_run(
 
     tuning = out / TUNING_DIR
     tuning.mkdir(parents=True, exist_ok=True)
-    _write_json(tuning / CANDIDATES_FILE, _candidates_payload(result.candidates))
+    _write_json(tuning / CANDIDATES_FILE, candidates_payload(result.candidates))
     result.inner_scores.to_csv(tuning / INNER_SCORES_FILE, index=False)
     _write_json(tuning / RANKINGS_FILE, _rankings_payload(result))
 

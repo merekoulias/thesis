@@ -21,7 +21,10 @@ from src.models.metrics import (
 from src.models.registry import fit_predict, get_model_spec
 from src.models.search import sample_candidates
 from src.models.types import (
+    CANDIDATES_FILE,
+    FINGERPRINT_FILE,
     INNER_SCORE_COLUMNS,
+    INNER_SCORES_FILE,
     OOF_FOLD_COL,
     OOF_PROBA_COL,
     CVSettings,
@@ -31,13 +34,11 @@ from src.models.types import (
     RankedRun,
     Split,
     TrainingData,
+    candidates_payload,
 )
 
 logger = logging.getLogger(__name__)
 
-CANDIDATES_FILE = "candidates.json"
-INNER_SCORES_FILE = "inner_scores.csv"
-FINGERPRINT_FILE = "fingerprint.json"
 FINGERPRINT_CHUNK_ROWS = 20_000
 
 _SCORE_DTYPES: Dict[str, Any] = {
@@ -74,10 +75,6 @@ def inner_splits_absolute(
     return [(outer_train_idx[tr], outer_train_idx[va]) for tr, va in inner_rel]
 
 
-def _candidates_payload(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return [{"candidate_id": i, "params": c} for i, c in enumerate(candidates)]
-
-
 def _json_round_trip(value: Any) -> Any:
     return json.loads(json.dumps(value))
 
@@ -85,14 +82,14 @@ def _json_round_trip(value: Any) -> Any:
 def _candidates_equal(
     stored: List[Dict[str, Any]], candidates: List[Dict[str, Any]]
 ) -> bool:
-    expected = _candidates_payload(candidates)
+    expected = candidates_payload(candidates)
     return _json_round_trip(stored) == _json_round_trip(expected)
 
 
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2)
+        json.dump(payload, fh, indent=2, allow_nan=False)
 
 
 def _read_json(path: Path) -> Any:
@@ -243,11 +240,13 @@ def _prepare_checkpoint(
     fingerprint: Dict[str, Any],
     resume: bool,
     n_inner_folds: int,
-) -> Tuple[Path, Set[Tuple[int, int]]]:
+) -> Tuple[Path, Set[Tuple[int, int]], float]:
     """Validate or create the checkpoint files.
 
     Returns:
-        (scores_path, finished (outer_fold, candidate_id) pairs).
+        (scores_path, finished (outer_fold, candidate_id) pairs, summed
+        ``fit_seconds`` of those finished pairs = tuning compute done by earlier
+        sessions).
     """
     candidates_path = checkpoint_dir / CANDIDATES_FILE
     scores_path = checkpoint_dir / INNER_SCORES_FILE
@@ -257,9 +256,9 @@ def _prepare_checkpoint(
         for existing in (candidates_path, scores_path, fingerprint_path):
             if existing.exists():
                 raise FileExistsError(f"Checkpoint already exists: {existing}")
-        _write_json(candidates_path, _candidates_payload(candidates))
+        _write_json(candidates_path, candidates_payload(candidates))
         _write_json(fingerprint_path, fingerprint)
-        return scores_path, set()
+        return scores_path, set(), 0.0
 
     if not candidates_path.exists():
         if scores_path.exists():
@@ -268,21 +267,21 @@ def _prepare_checkpoint(
                 "cannot verify the checkpoint"
             )
         logger.info("No checkpoint found in %s; starting fresh", checkpoint_dir)
-        _write_json(candidates_path, _candidates_payload(candidates))
+        _write_json(candidates_path, candidates_payload(candidates))
         _write_json(fingerprint_path, fingerprint)
-        return scores_path, set()
+        return scores_path, set(), 0.0
 
     if not _candidates_equal(_read_json(candidates_path), candidates):
         raise ValueError("Search candidates changed since checkpoint was written")
     _check_fingerprint(fingerprint_path, fingerprint)
 
     if not scores_path.exists():
-        return scores_path, set()
+        return scores_path, set(), 0.0
     pruned = _prune_and_rewrite_scores(scores_path, n_inner_folds)
     done = {
         (int(k), int(c)) for k, c in zip(pruned["outer_fold"], pruned["candidate_id"])
     }
-    return scores_path, done
+    return scores_path, done, float(pruned["fit_seconds"].sum())
 
 
 def run_nested_cv(
@@ -309,7 +308,9 @@ def run_nested_cv(
             existing checkpoint raises FileExistsError.
 
     Returns:
-        NestedCVResult.
+        NestedCVResult. ``runtime_seconds`` is the wall time of this call plus the
+        ``fit_seconds`` of the tuning pairs finished by earlier sessions (a lower
+        bound of their wall time), so a resumed run does not under-report compute.
 
     Raises:
         FileExistsError: ``checkpoint_dir`` already holds checkpoint files and
@@ -336,13 +337,14 @@ def run_nested_cv(
 
     scores_path: Optional[Path] = None
     done_pairs: Set[Tuple[int, int]] = set()
+    carried_fit_seconds = 0.0
     score_rows: List[Dict[str, Any]] = []
 
     if checkpoint_dir is not None:
         fingerprint = _run_fingerprint(
             model_config, cv_settings, X, y, ids, data.feature_names
         )
-        scores_path, done_pairs = _prepare_checkpoint(
+        scores_path, done_pairs, carried_fit_seconds = _prepare_checkpoint(
             Path(checkpoint_dir),
             candidates,
             fingerprint,
@@ -588,7 +590,7 @@ def run_nested_cv(
     else:
         feature_importance = None
 
-    runtime_seconds = time.perf_counter() - t0
+    runtime_seconds = time.perf_counter() - t0 + carried_fit_seconds
     return NestedCVResult(
         model_name=model_config.name,
         candidates=candidates,
