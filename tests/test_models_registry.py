@@ -1,9 +1,12 @@
 """Tests for the model registry and fit_predict adapter."""
 
+import dataclasses
 import warnings
+from unittest import mock
 
 import numpy as np
 import pytest
+from lightgbm import LGBMClassifier
 from sklearn.exceptions import ConvergenceWarning
 
 from src.models.registry import FINAL_STEP, MODEL_REGISTRY, fit_predict, get_model_spec
@@ -234,6 +237,28 @@ def test_mlp_convergence_warning_suppressed(make_training_data, tiny_model_confi
     convergence = [w for w in caught if issubclass(w.category, ConvergenceWarning)]
     assert len(convergence) == 0
 
+    # Control: the same fit does raise the warning when suppression is off.
+    unsuppressed = dataclasses.replace(spec, suppress_convergence_warnings=False)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        fit_predict(
+            unsuppressed,
+            params,
+            seed=42,
+            X_train=X[:150],
+            y_train=y[:150],
+            X_pred=X[150:],
+        )
+    assert any(issubclass(w.category, ConvergenceWarning) for w in caught)
+
+
+def _expected_importance(model_name, estimator, importance_type):
+    if model_name == "lgbm":
+        return estimator.booster_.feature_importance(importance_type=importance_type)
+    if model_name == "rf":
+        return estimator.feature_importances_
+    return estimator.named_steps[FINAL_STEP].coef_[0]
+
 
 @pytest.mark.parametrize(
     "model_name,importance_types",
@@ -270,7 +295,12 @@ def test_importance_frames(
     assert list(frame.columns) == ["feature", "importance_type", "importance"]
     for imp_type in importance_types:
         subset = frame[frame["importance_type"] == imp_type]
-        assert len(subset) == len(feature_names)
+        assert subset["feature"].tolist() == feature_names
+        expected = _expected_importance(model_name, out.estimator, imp_type)
+        assert np.array_equal(subset["importance"].to_numpy(), expected)
+
+    with pytest.raises(ValueError):
+        spec.importance(out.estimator, feature_names[:-1])
 
 
 def test_mlp_has_no_importance():
@@ -327,3 +357,40 @@ def test_return_train_proba(model_name, make_training_data, tiny_model_configs):
     assert out_train.train_proba.dtype == np.float64
     assert np.all((out_train.train_proba >= 0.0) & (out_train.train_proba <= 1.0))
     assert np.array_equal(out_default.proba, out_train.proba)
+
+
+def test_no_extra_fit_kwargs_without_sample_weight(
+    make_training_data, tiny_model_configs
+):
+    data = make_training_data(n_samples=200, seed=11)
+    X = data.X.to_numpy(dtype=np.float64)
+    y = data.y.to_numpy()
+    spec = get_model_spec("lgbm")
+    params = _resolved_params(tiny_model_configs["lgbm"])
+
+    with mock.patch.object(
+        LGBMClassifier, "fit", autospec=True, side_effect=LGBMClassifier.fit
+    ) as patched:
+        fit_predict(
+            spec, params, seed=42, X_train=X[:150], y_train=y[:150], X_pred=X[150:]
+        )
+    assert patched.call_args.kwargs == {}
+
+
+def test_rounds_require_eval_set(make_training_data, tiny_model_configs):
+    data = make_training_data(n_samples=200, seed=12)
+    X = data.X.to_numpy(dtype=np.float64)
+    y = data.y.to_numpy()
+    spec = get_model_spec("lgbm")
+    params = _resolved_params(tiny_model_configs["lgbm"])
+
+    with pytest.raises(ValueError):
+        fit_predict(
+            spec,
+            params,
+            seed=42,
+            X_train=X[:150],
+            y_train=y[:150],
+            X_pred=X[150:],
+            early_stopping_rounds=5,
+        )

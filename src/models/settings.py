@@ -1,7 +1,7 @@
 """Load and validate nested-CV and per-model YAML configuration."""
 
 from pathlib import Path
-from typing import Any, Dict, Set, Union
+from typing import Any, Dict, Set, Tuple, Union
 
 from src.models.io import load_yaml_config
 from src.models.registry import MODEL_REGISTRY

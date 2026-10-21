@@ -52,7 +52,7 @@ def _lgbm_importance(estimator: Any, feature_names: List[str]) -> pd.DataFrame:
     rows: List[Dict[str, Any]] = []
     for importance_type in ("gain", "split"):
         values = estimator.booster_.feature_importance(importance_type=importance_type)
-        for feature, importance in zip(feature_names, values):
+        for feature, importance in zip(feature_names, values, strict=True):
             rows.append(
                 {
                     "feature": feature,
@@ -71,7 +71,7 @@ def _rf_importance(estimator: Any, feature_names: List[str]) -> pd.DataFrame:
             "importance_type": "impurity",
             "importance": float(importance),
         }
-        for feature, importance in zip(feature_names, values)
+        for feature, importance in zip(feature_names, values, strict=True)
     ]
     return pd.DataFrame(rows)
 
@@ -84,7 +84,7 @@ def _logreg_importance(estimator: Any, feature_names: List[str]) -> pd.DataFrame
             "importance_type": "coef",
             "importance": float(importance),
         }
-        for feature, importance in zip(feature_names, coef)
+        for feature, importance in zip(feature_names, coef, strict=True)
     ]
     return pd.DataFrame(rows)
 
@@ -164,12 +164,18 @@ def fit_predict(
             FitOutput.train_proba, for the fit diagnostics.
 
     Returns:
-        FitOutput(proba float64 1-D, best_iteration or None, fit_seconds, estimator or None).
+        FitOutput with ``proba`` (float64, 1-D), ``best_iteration`` (None without
+        early stopping), ``fit_seconds``, ``estimator`` (None unless
+        ``keep_estimator``) and ``train_proba`` (None unless
+        ``return_train_proba``).
 
     Raises:
-        ValueError: eval_set given for a model without early stopping, or
-            eval_set given without early_stopping_rounds.
+        ValueError: eval_set given for a model without early stopping, eval_set
+            given without early_stopping_rounds, or early_stopping_rounds given
+            without eval_set.
     """
+    if eval_set is None and early_stopping_rounds is not None:
+        raise ValueError("early_stopping_rounds requires eval_set")
     if eval_set is not None:
         if not spec.uses_early_stopping:
             raise ValueError(
