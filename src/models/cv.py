@@ -14,7 +14,14 @@ def make_stratified_splits(y: np.ndarray, n_splits: int, seed: int) -> List[Spli
 
     Uses np.zeros(len(y)) as the X placeholder; splits depend only on y and the seed,
     so they equal the legacy folds when given the full y and seed 42.
-    Returns a list of (train_idx, val_idx) int64 arrays.
+
+    Args:
+        y: Binary target, one entry per row.
+        n_splits: Number of folds.
+        seed: Shuffle seed.
+
+    Returns:
+        List of (train_idx, val_idx) int64 arrays, one pair per fold.
     """
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     placeholder = np.zeros(len(y), dtype=np.float64)
@@ -30,13 +37,11 @@ def make_stratified_splits(y: np.ndarray, n_splits: int, seed: int) -> List[Spli
 
 
 def _validation_parts_overlap(splits: Sequence[Split]) -> bool:
-    seen: set = set()
-    for _, val_idx in splits:
-        for idx in val_idx:
-            if idx in seen:
-                return True
-            seen.add(int(idx))
-    return False
+    """Return True if any row index appears more than once across validation parts."""
+    if not splits:
+        return False
+    all_val = np.concatenate([val_idx for _, val_idx in splits])
+    return bool(np.unique(all_val).size != all_val.size)
 
 
 def cross_val_predict_model(
@@ -92,12 +97,6 @@ def cross_val_predict_model(
             early_stopping_rounds=es_rounds,
         )
         oof[val_idx] = fit_out.proba
-        fits.append(
-            FitOutput(
-                proba=fit_out.proba,
-                best_iteration=fit_out.best_iteration,
-                fit_seconds=fit_out.fit_seconds,
-            )
-        )
+        fits.append(fit_out)
 
     return oof, fits

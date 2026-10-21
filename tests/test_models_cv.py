@@ -7,7 +7,7 @@ from sklearn.model_selection import StratifiedKFold
 from src.models.cv import cross_val_predict_model, make_stratified_splits
 from src.models.registry import get_model_spec
 from src.models.training import train_lgbm_cv
-from src.models.types import ModelConfig
+from src.models.types import OOF_PROBA_COL, ModelConfig
 
 MODEL_NAMES = ("lgbm", "rf", "logreg", "mlp")
 
@@ -140,7 +140,7 @@ def test_matches_legacy_train_lgbm_cv(make_training_data):
         early_stopping_rounds=legacy_cfg["early_stopping_rounds"],
     )
 
-    legacy_proba = legacy.oof_predictions["y_pred_proba"].to_numpy()
+    legacy_proba = legacy.oof_predictions[OOF_PROBA_COL].to_numpy()
     assert np.array_equal(oof, legacy_proba)
 
     legacy_iters = [fr.best_iteration for fr in legacy.fold_results]

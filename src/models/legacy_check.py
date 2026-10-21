@@ -3,7 +3,7 @@
 import argparse
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Optional, Sequence
 
 import numpy as np
 from sklearn.metrics import roc_auc_score
@@ -22,8 +22,15 @@ def _fold_assignments(n_samples: int, splits: Sequence[Split]) -> np.ndarray:
     return folds
 
 
-def main(argv: Sequence[str] = None) -> None:
-    """Run legacy vs new OOF equivalence check on full training data."""
+def main(argv: Optional[Sequence[str]] = None) -> None:
+    """Run legacy vs new OOF equivalence check on full training data.
+
+    Args:
+        argv: Command-line arguments; defaults to sys.argv[1:].
+
+    Exits with status 0 when the OOF predictions, fold assignment and best
+    iterations are identical (max |Δp| <= 1e-9), otherwise with status 1.
+    """
     parser = argparse.ArgumentParser(
         description="Compare train_lgbm_cv OOF predictions to the generic CV core."
     )
