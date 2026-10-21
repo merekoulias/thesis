@@ -1,16 +1,14 @@
 """Load and validate nested-CV and per-model YAML configuration."""
 
 from pathlib import Path
-from typing import Any, Dict, Set, Tuple, Union
+from typing import Any, Dict, Set, Union
 
 from src.models.io import load_yaml_config
+from src.models.registry import MODEL_REGISTRY
 from src.models.search import validate_distribution
 from src.models.types import CVSettings, ModelConfig
 
 PathLike = Union[str, Path]
-
-KNOWN_MODELS: Tuple[str, ...] = ("lgbm", "rf", "logreg", "mlp")
-EARLY_STOPPING_MODELS: Tuple[str, ...] = ("lgbm",)
 
 _ALLOWED_MODEL_TOP_KEYS: Set[str] = {
     "name",
@@ -158,10 +156,11 @@ def load_model_config(path: PathLike) -> ModelConfig:
         raise ValueError(f"{config_path}: name must be a string, got {name!r}")
 
     stem = config_path.stem
-    if name not in KNOWN_MODELS:
+    if name not in MODEL_REGISTRY:
+        available = tuple(sorted(MODEL_REGISTRY.keys()))
         raise ValueError(
             f"{config_path}: unknown model name '{name}'; "
-            f"expected one of {KNOWN_MODELS}"
+            f"expected one of {available}"
         )
     if name != stem:
         raise ValueError(f"{config_path}: name '{name}' must match file stem '{stem}'")
@@ -207,7 +206,7 @@ def load_model_config(path: PathLike) -> ModelConfig:
             raise ValueError(f"{config_path}: {exc}") from exc
 
     early_stopping_rounds = raw.get("early_stopping_rounds")
-    if name in EARLY_STOPPING_MODELS:
+    if MODEL_REGISTRY[name].uses_early_stopping:
         if not isinstance(early_stopping_rounds, int) or isinstance(
             early_stopping_rounds, bool
         ):

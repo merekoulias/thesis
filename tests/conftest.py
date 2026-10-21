@@ -217,3 +217,78 @@ def fixture_csv_dir(tiny_home_credit_data: HomeCreditData, tmp_path: Path) -> Pa
     for name, frame in mapping.items():
         frame.to_csv(tmp_path / name, index=False)
     return tmp_path
+
+
+@pytest.fixture
+def make_training_data():
+    """Factory for small synthetic TrainingData with a learnable signal."""
+    from src.constants import SK_ID_CURR, TARGET_COL
+    from src.models.types import TrainingData
+
+    def _make(n_samples: int = 400, n_features: int = 8, seed: int = 0) -> TrainingData:
+        rng = np.random.default_rng(seed)
+        X = pd.DataFrame(
+            rng.normal(size=(n_samples, n_features)),
+            columns=[f"feat_{i}" for i in range(n_features)],
+        )
+        X["cat__CODE_GENDER_F"] = (rng.random(n_samples) < 0.66).astype(float)
+        X["cat__CODE_GENDER_M"] = 1.0 - X["cat__CODE_GENDER_F"]
+        X["num__DAYS_BIRTH"] = -rng.integers(7500, 25000, size=n_samples).astype(float)
+        logits = -1.5 + 1.5 * X["feat_0"] - 1.0 * X["feat_1"]
+        y = (rng.random(n_samples) < 1.0 / (1.0 + np.exp(-logits))).astype(np.int8)
+        ids = pd.Series(np.arange(1, n_samples + 1), name=SK_ID_CURR)
+        return TrainingData(
+            X=X, y=pd.Series(y, name=TARGET_COL), ids=ids, feature_names=list(X.columns)
+        )
+
+    return _make
+
+
+@pytest.fixture
+def tiny_model_configs():
+    """Fast ModelConfig per registry model (for unit tests only)."""
+    from src.models.types import ModelConfig
+
+    return {
+        "lgbm": ModelConfig(
+            name="lgbm",
+            fixed_params={
+                "objective": "binary",
+                "n_estimators": 40,
+                "learning_rate": 0.1,
+                "verbosity": -1,
+                "n_jobs": 1,
+                "subsample_freq": 1,
+            },
+            default_params={"num_leaves": 7, "subsample": 0.8},
+            search_space={
+                "num_leaves": {"dist": "int_uniform", "low": 4, "high": 15},
+                "subsample": {"dist": "uniform", "low": 0.6, "high": 1.0},
+            },
+            early_stopping_rounds=5,
+        ),
+        "rf": ModelConfig(
+            name="rf",
+            fixed_params={"n_estimators": 15, "n_jobs": 1},
+            default_params={"min_samples_leaf": 5},
+            search_space={
+                "min_samples_leaf": {"dist": "int_loguniform", "low": 2, "high": 30}
+            },
+        ),
+        "logreg": ModelConfig(
+            name="logreg",
+            fixed_params={"max_iter": 500},
+            default_params={"C": 1.0},
+            search_space={"C": {"dist": "loguniform", "low": 0.01, "high": 10.0}},
+        ),
+        "mlp": ModelConfig(
+            name="mlp",
+            fixed_params={"early_stopping": False},
+            default_params={"hidden_layer_sizes": [8], "alpha": 0.1, "max_iter": 5},
+            search_space={
+                "hidden_layer_sizes": {"dist": "choice", "values": [[4], [8]]},
+                "alpha": {"dist": "loguniform", "low": 0.001, "high": 1.0},
+                "max_iter": {"dist": "int_uniform", "low": 3, "high": 8},
+            },
+        ),
+    }
