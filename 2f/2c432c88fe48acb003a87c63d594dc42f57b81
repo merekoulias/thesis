@@ -1,0 +1,25 @@
+.cursor/plans/multi-model-nested-cv.md
+  s_55357da2e7323e::t_fe0ddebaeb057e 20-21
+src/models/cv.py
+  s_55357da2e7323e::t_d901d50f914b5e 17-24,40-44,100
+src/models/legacy_check.py
+  s_55357da2e7323e::t_e8a8945c83f5c2 6,25-33
+tests/test_models_cv.py
+  s_55357da2e7323e::t_94ee60c994f061 10,143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f2c432c88fe48acb003a87c63d594dc42f57b81",
+  "prompts": {},
+  "sessions": {
+    "s_55357da2e7323e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e0b4e59f-68d4-44df-b5a5-fb095a563b89",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
