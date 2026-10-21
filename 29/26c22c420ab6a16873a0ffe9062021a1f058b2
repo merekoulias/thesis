@@ -1,0 +1,47 @@
+analysis/helpers/data_audit.py
+  s_e298ebaeb4ac56::t_6fd9bad049f4fc 189-191,246,347,425
+src/data/loader.py
+  s_e298ebaeb4ac56::t_a1f1a664526a63 15-19,101
+src/data/validation.py
+  s_e298ebaeb4ac56::t_0c1e23400ddf88 17,45,57,80
+src/features/bureau.py
+  s_e298ebaeb4ac56::t_94250badee87a3 18-20,67,79,105,120,125
+src/features/credit_card.py
+  s_e298ebaeb4ac56::t_c151a25c7ee4d6 35-38,46-48,95-96
+src/features/encoding.py
+  s_e298ebaeb4ac56::t_ca39aa7ddc9856 138,201
+src/features/installments.py
+  s_e298ebaeb4ac56::t_11f96113ed12e7 27
+src/features/pipeline.py
+  s_e298ebaeb4ac56::t_9db93db29af1f3 52,111,117,187-188,202
+src/features/pos_cash.py
+  s_e298ebaeb4ac56::t_224f86b164a055 21-24,45,65,67-68
+src/features/previous.py
+  s_e298ebaeb4ac56::t_603d4499c4c7ec 29-31,36,93,96
+src/models/io.py
+  s_e298ebaeb4ac56::t_ce2fe07c88f352 37,87,89,108,110,117
+src/models/training.py
+  s_e298ebaeb4ac56::t_4459755f19a6fb 16-17,22-24,53,119,142-144
+tests/test_features_aggregations.py
+  s_e298ebaeb4ac56::t_c0529338fb148d 79
+tests/test_features_pipeline.py
+  s_e298ebaeb4ac56::t_aa956987774ca3 66
+tests/test_models_pipeline.py
+  s_e298ebaeb4ac56::t_ae6769cafa582e 39-41,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2926c22c420ab6a16873a0ffe9062021a1f058b2",
+  "prompts": {},
+  "sessions": {
+    "s_e298ebaeb4ac56": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "477c6af5-db80-4731-a72a-19890f3dbef6",
+        "model": "composer-2.5"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
