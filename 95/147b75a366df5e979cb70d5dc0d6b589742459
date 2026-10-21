@@ -1,0 +1,27 @@
+.cursor/plans/multi-model-nested-cv.md
+  s_cac78893af561a::t_f851eff1556d3b 21-22,177,479,1273-1275,1303-1307,1309-1312,1409,1413,1415,1418-1424,1463-1464,1499,1588,1591-1592,1594-1596,1599-1605,1607,1734
+src/models/metrics.py
+  s_cac78893af561a::t_ed437bb6fad1a8 39,45-49,52,55-57,61,101,107-111,114
+src/models/nested.py
+  s_cac78893af561a::t_93092271af64cf 3,40-52,61,81-84,89,92,95,98,103-114,117-142,144-189,196,228-229,231-234,236-285,303-309,313-319,339,342-351,355-356,414,418-420,423,444,447,451-452,457,477-482,574,582
+tests/test_models_metrics.py
+  s_cac78893af561a::t_c3829765442cac 82-91
+tests/test_models_nested.py
+  s_cac78893af561a::t_97bff6ef11e5d3 3,11,13,16,22,88-90,93,96-111,150-154,156-158,161-162,166-185,229-230,270-423,453-454
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "95147b75a366df5e979cb70d5dc0d6b589742459",
+  "prompts": {},
+  "sessions": {
+    "s_cac78893af561a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "693711e3-0bb3-45a5-a08d-cadac27ffa92",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
