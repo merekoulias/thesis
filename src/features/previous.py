@@ -7,7 +7,6 @@ import pandas as pd
 
 from src.features.types import DAYS_SENTINEL, SK_ID_CURR, SK_ID_PREV
 
-
 _PREV_DAY_COLS = (
     "DAYS_FIRST_DRAWING",
     "DAYS_FIRST_DUE",
@@ -27,16 +26,14 @@ def _replace_prev_day_sentinels(df: pd.DataFrame) -> pd.DataFrame:
         out[f"{col}_ANOM"] = anom.astype(np.int8)
         out.loc[anom, col] = np.nan
     if "SELLERPLACE_AREA" in out.columns:
-        out["SELLERPLACE_AREA_MISSING"] = (
-            out["SELLERPLACE_AREA"] == -1
-        ).astype(np.int8)
+        out["SELLERPLACE_AREA_MISSING"] = (out["SELLERPLACE_AREA"] == -1).astype(
+            np.int8
+        )
         out.loc[out["SELLERPLACE_AREA"] == -1, "SELLERPLACE_AREA"] = np.nan
     return out
 
 
-def _onehot_counts(
-    df: pd.DataFrame, col: str, prefix: str
-) -> pd.DataFrame:
+def _onehot_counts(df: pd.DataFrame, col: str, prefix: str) -> pd.DataFrame:
     dummies = pd.get_dummies(df[col], prefix=prefix, dtype=np.int8)
     tmp = pd.concat([df[[SK_ID_CURR]], dummies], axis=1)
     return tmp.groupby(SK_ID_CURR).sum()
@@ -93,15 +90,10 @@ def aggregate_previous(previous: pd.DataFrame) -> pd.DataFrame:
                 numeric_aggs[anom] = ["mean"]
 
     use_aggs = {
-        k: v
-        for k, v in numeric_aggs.items()
-        if k == SK_ID_PREV or k in prev.columns
+        k: v for k, v in numeric_aggs.items() if k == SK_ID_PREV or k in prev.columns
     }
     num = prev.groupby(SK_ID_CURR).agg(use_aggs)
-    num.columns = [
-        f"PREV_{a}_{b}".upper()
-        for a, b in num.columns.to_flat_index()
-    ]
+    num.columns = [f"PREV_{a}_{b}".upper() for a, b in num.columns.to_flat_index()]
     count_cols = [c for c in num.columns if "SK_ID_PREV" in c]
     if count_cols:
         num = num.rename(columns={count_cols[0]: "PREV_APP_COUNT"})

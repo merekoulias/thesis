@@ -11,15 +11,17 @@ from sklearn.model_selection import StratifiedKFold
 
 from src.constants import SK_ID_CURR, TARGET_COL
 from src.models.types import (
-    CVResult,
-    FoldResult,
     OOF_FOLD_COL,
     OOF_PROBA_COL,
+    CVResult,
+    FoldResult,
     TrainingData,
 )
 
 
-def _sanitize_feature_names(columns: List[str]) -> Tuple[Dict[str, str], Dict[str, str]]:
+def _sanitize_feature_names(
+    columns: List[str],
+) -> Tuple[Dict[str, str], Dict[str, str]]:
     """Map original feature names to LightGBM-safe identifiers.
 
     LightGBM rejects feature names with JSON-special characters (e.g. spaces).
@@ -48,9 +50,7 @@ def _sanitize_feature_names(columns: List[str]) -> Tuple[Dict[str, str], Dict[st
     return original_to_safe, safe_to_original
 
 
-def _rename_features(
-    X: pd.DataFrame, original_to_safe: Dict[str, str]
-) -> pd.DataFrame:
+def _rename_features(X: pd.DataFrame, original_to_safe: Dict[str, str]) -> pd.DataFrame:
     """Return X with sanitized column names for LightGBM."""
     return X.rename(columns=original_to_safe)
 
@@ -116,9 +116,7 @@ def train_lgbm_cv(
     safe_feature_names = list(X.columns)
     n_samples = len(X)
 
-    skf = StratifiedKFold(
-        n_splits=n_folds, shuffle=True, random_state=seed
-    )
+    skf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=seed)
 
     oof_proba = np.full(n_samples, np.nan, dtype=float)
     fold_assignments = np.full(n_samples, -1, dtype=int)
@@ -141,7 +139,9 @@ def train_lgbm_cv(
             callbacks=[early_stopping(early_stopping_rounds, verbose=False)],
         )
 
-        val_proba = model.predict_proba(X_val, num_iteration=model.best_iteration_)[:, 1]
+        val_proba = model.predict_proba(X_val, num_iteration=model.best_iteration_)[
+            :, 1
+        ]
         oof_proba[val_idx] = val_proba
         fold_assignments[val_idx] = fold_idx
 

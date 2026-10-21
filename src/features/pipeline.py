@@ -49,9 +49,7 @@ def _left_join_features(
     return out
 
 
-def _build_client_matrix(
-    app: pd.DataFrame, child_features: dict
-) -> pd.DataFrame:
+def _build_client_matrix(app: pd.DataFrame, child_features: dict) -> pd.DataFrame:
     """Join all child-table aggregates onto the application base."""
     matrix = app.copy()
     joins = (
@@ -110,17 +108,13 @@ def build_features(
     test_matrix = _build_client_matrix(test_app, child_features)
 
     # Align columns after joins (child one-hots may differ by split)
-    all_cols = sorted(
-        set(train_matrix.columns).union(test_matrix.columns)
-    )
+    all_cols = sorted(set(train_matrix.columns).union(test_matrix.columns))
     # Keep SK_ID_CURR first for readability
     ordered = [SK_ID_CURR] + [c for c in all_cols if c != SK_ID_CURR]
     train_matrix = train_matrix.reindex(columns=ordered)
     test_matrix = test_matrix.reindex(columns=ordered)
 
-    train_matrix, test_matrix, _ = add_missing_indicators(
-        train_matrix, test_matrix
-    )
+    train_matrix, test_matrix, _ = add_missing_indicators(train_matrix, test_matrix)
 
     feature_cols = [c for c in train_matrix.columns if c != SK_ID_CURR]
     X_train_raw = train_matrix[feature_cols]
@@ -190,12 +184,8 @@ def save_feature_artifacts(
         "n_features": len(bundle.feature_names),
         "n_train": int(len(bundle.X_train)),
         "n_test": int(len(bundle.X_test)),
-        "xna_dropped": int(
-            bundle.cleaning_report.xna_gender_rows_dropped
-        ),
-        "building_cols_dropped": (
-            bundle.cleaning_report.building_columns_dropped
-        ),
+        "xna_dropped": int(bundle.cleaning_report.xna_gender_rows_dropped),
+        "building_cols_dropped": (bundle.cleaning_report.building_columns_dropped),
         "numeric_source_columns": bundle.numeric_source_columns,
         "categorical_source_columns": bundle.categorical_source_columns,
         "feature_names": bundle.feature_names,
@@ -209,9 +199,7 @@ def main() -> None:
     """CLI entrypoint: build and save feature artifacts."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Build Home Credit feature matrices"
-    )
+    parser = argparse.ArgumentParser(description="Build Home Credit feature matrices")
     parser.add_argument(
         "--data-dir",
         type=str,

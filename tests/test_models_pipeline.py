@@ -36,7 +36,9 @@ def _make_synthetic_training_data(
 
     ids = pd.Series(range(1, n_samples + 1), name=SK_ID_CURR)
     feature_names = list(X.columns)
-    return TrainingData(X=X, y=pd.Series(y, name=TARGET_COL), ids=ids, feature_names=feature_names)
+    return TrainingData(
+        X=X, y=pd.Series(y, name=TARGET_COL), ids=ids, feature_names=feature_names
+    )
 
 
 def _write_feature_artifacts(data: TrainingData, out_dir: Path) -> None:
@@ -121,9 +123,7 @@ def test_load_training_data_validates(tmp_path: Path) -> None:
 
 def test_load_training_data_missing_protected_attrs(tmp_path: Path) -> None:
     data = _make_synthetic_training_data(n_samples=30)
-    data.X = data.X.drop(
-        columns=[c for c in data.X.columns if "CODE_GENDER" in c]
-    )
+    data.X = data.X.drop(columns=[c for c in data.X.columns if "CODE_GENDER" in c])
     data.feature_names = list(data.X.columns)
     _write_feature_artifacts(data, tmp_path)
     with pytest.raises(ValueError, match="CODE_GENDER"):

@@ -32,9 +32,10 @@ def aggregate_credit_card(cc: pd.DataFrame) -> pd.DataFrame:
         "AMT_PAYMENT_CURRENT" in work.columns
         and "AMT_INST_MIN_REGULARITY" in work.columns
     ):
-        comparable = work["AMT_INST_MIN_REGULARITY"].notna() & work[
-            "AMT_PAYMENT_CURRENT"
-        ].notna()
+        comparable = (
+            work["AMT_INST_MIN_REGULARITY"].notna()
+            & work["AMT_PAYMENT_CURRENT"].notna()
+        )
         below = comparable & (
             work["AMT_PAYMENT_CURRENT"] < work["AMT_INST_MIN_REGULARITY"]
         )
@@ -42,9 +43,9 @@ def aggregate_credit_card(cc: pd.DataFrame) -> pd.DataFrame:
     else:
         work["CC_BELOW_MIN"] = 0
 
-    work["CC_HAS_DRAWING"] = (
-        work.get("AMT_DRAWINGS_CURRENT", 0).fillna(0) > 0
-    ).astype(np.int8)
+    work["CC_HAS_DRAWING"] = (work.get("AMT_DRAWINGS_CURRENT", 0).fillna(0) > 0).astype(
+        np.int8
+    )
 
     # Clip negative balances / receivables for stable aggregates
     for col in ("AMT_BALANCE", "AMT_TOTAL_RECEIVABLE"):
@@ -91,14 +92,8 @@ def aggregate_credit_card(cc: pd.DataFrame) -> pd.DataFrame:
             SK_ID_PREV: ["nunique"],
         }
     )
-    client.columns = [
-        f"{a}_{b}".upper() for a, b in client.columns.to_flat_index()
-    ]
-    rename = {
-        c: "CC_PREV_COUNT"
-        for c in client.columns
-        if "SK_ID_PREV" in c
-    }
+    client.columns = [f"{a}_{b}".upper() for a, b in client.columns.to_flat_index()]
+    rename = {c: "CC_PREV_COUNT" for c in client.columns if "SK_ID_PREV" in c}
     client = client.rename(columns=rename)
     out = client.reset_index()
     out["HAS_CREDIT_CARD_HISTORY"] = 1

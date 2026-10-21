@@ -14,9 +14,7 @@ class DataValidationError(ValueError):
 def _require_columns(df: pd.DataFrame, columns: Iterable[str], name: str) -> None:
     missing = [c for c in columns if c not in df.columns]
     if missing:
-        raise DataValidationError(
-            f"{name}: missing required columns: {missing}"
-        )
+        raise DataValidationError(f"{name}: missing required columns: {missing}")
 
 
 def validate_table(
@@ -44,9 +42,7 @@ def validate_table(
 
     if unique_key is not None:
         if unique_key not in df.columns:
-            raise DataValidationError(
-                f"{name}: unique key {unique_key!r} not found"
-            )
+            raise DataValidationError(f"{name}: unique key {unique_key!r} not found")
         if df[unique_key].isna().any():
             raise DataValidationError(
                 f"{name}: unique key {unique_key!r} contains nulls"
@@ -58,9 +54,7 @@ def validate_table(
             )
 
 
-def validate_application_pair(
-    train: pd.DataFrame, test: pd.DataFrame
-) -> None:
+def validate_application_pair(train: pd.DataFrame, test: pd.DataFrame) -> None:
     """Validate train/test application tables against FE contracts.
 
     Args:
@@ -83,9 +77,7 @@ def validate_application_pair(
         unique_key=SK_ID_CURR,
     )
     if TARGET_COL in test.columns:
-        raise DataValidationError(
-            "application_test must not contain TARGET"
-        )
+        raise DataValidationError("application_test must not contain TARGET")
     train_feats = set(train.columns) - {TARGET_COL}
     test_feats = set(test.columns)
     if train_feats != test_feats:

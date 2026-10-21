@@ -76,9 +76,7 @@ def test_bureau_aggregates_one_row_per_client(
 def test_installments_collapses_partial_payments(
     tiny_home_credit_data: HomeCreditData,
 ) -> None:
-    feat = aggregate_installments(
-        tiny_home_credit_data.installments_payments
-    )
+    feat = aggregate_installments(tiny_home_credit_data.installments_payments)
     assert feat[SK_ID_CURR].is_unique
     # Client 1: two scheduled installments (partials collapsed)
     row = feat.loc[feat[SK_ID_CURR] == 1].iloc[0]

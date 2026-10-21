@@ -186,9 +186,9 @@ def worst_group_summary(
     y_star = rng.binomial(n_arr.astype(int), y, size=(n_boot, k)) / n_arr
     maxmin_star = y_star.max(axis=1) - y_star.min(axis=1)
     var_star = np.var(y_star, axis=1, ddof=1)
-    sampling_var_star = 2 * y_star * (1 - y_star) / n_arr - y_star * (
-        1 - y_star
-    ) / (n_arr**2)
+    sampling_var_star = 2 * y_star * (1 - y_star) / n_arr - y_star * (1 - y_star) / (
+        n_arr**2
+    )
     var_double_star = np.maximum(0.0, var_star - sampling_var_star.mean(axis=1))
 
     lo, hi = 100 * alpha / 2, 100 * (1 - alpha / 2)
@@ -243,9 +243,7 @@ def cmh_test(
         frame.groupby(["s", "a", "y"], observed=True)
         .size()
         .unstack(["a", "y"], fill_value=0)
-        .reindex(
-            columns=pd.MultiIndex.from_product([[0, 1], [0, 1]]), fill_value=0
-        )
+        .reindex(columns=pd.MultiIndex.from_product([[0, 1], [0, 1]]), fill_value=0)
         .astype(float)
     )
     a, b = counts[(1, 1)], counts[(1, 0)]
@@ -346,9 +344,7 @@ def association_profile(
 # ---------------------------------------------------------------------------
 
 
-def missing_rate_by_group(
-    indicators: pd.DataFrame, groups: pd.Series
-) -> pd.DataFrame:
+def missing_rate_by_group(indicators: pd.DataFrame, groups: pd.Series) -> pd.DataFrame:
     """Share of missing values per column and group.
 
     Args:
@@ -426,9 +422,7 @@ class PredictabilityResult:
     dropped_columns: List[str]
 
 
-def balanced_error_rate(
-    y_true: np.ndarray, y_pred: np.ndarray
-) -> float:
+def balanced_error_rate(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """Balanced error rate: mean of the two class-conditional error rates."""
     y_true = np.asarray(y_true).astype(int)
     y_pred = np.asarray(y_pred).astype(int)

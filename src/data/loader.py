@@ -6,16 +6,16 @@ from typing import Dict, Optional, Tuple, Union
 
 import pandas as pd
 
-from src.data.validation import (
-    DataValidationError,
-    validate_application_pair,
-    validate_table,
-)
 from src.constants import (
     REQUIRED_KEYS,
     SK_ID_BUREAU,
     SK_ID_CURR,
     TABLE_FILES,
+)
+from src.data.validation import (
+    DataValidationError,
+    validate_application_pair,
+    validate_table,
 )
 
 PathLike = Union[str, Path]
@@ -98,9 +98,7 @@ def load_home_credit_data(
         limit = limits.get(name)
         frames[name] = _read_csv(path, nrows=limit)
 
-    validate_application_pair(
-        frames["application_train"], frames["application_test"]
-    )
+    validate_application_pair(frames["application_train"], frames["application_test"])
 
     train, test, n_xna = _drop_xna_gender(
         frames["application_train"], frames["application_test"]

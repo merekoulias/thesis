@@ -15,9 +15,9 @@ def _aggregate_bureau_balance(bb: pd.DataFrame) -> pd.DataFrame:
     work["BB_STATUS_C"] = (work["STATUS"] == "C").astype(np.int8)
     work["BB_STATUS_X"] = (work["STATUS"] == "X").astype(np.int8)
     work["BB_STATUS_0"] = (work["STATUS"] == "0").astype(np.int8)
-    work["BB_STATUS_DPD"] = work["STATUS"].isin(
-        ["1", "2", "3", "4", "5"]
-    ).astype(np.int8)
+    work["BB_STATUS_DPD"] = (
+        work["STATUS"].isin(["1", "2", "3", "4", "5"]).astype(np.int8)
+    )
 
     # Freshest month: MONTHS_BALANCE closest to 0
     idx = work.groupby(SK_ID_BUREAU)["MONTHS_BALANCE"].idxmax()
@@ -64,9 +64,7 @@ def aggregate_bureau(
     """
     bb_feat = _aggregate_bureau_balance(bureau_balance)
     bur = bureau.merge(bb_feat, on=SK_ID_BUREAU, how="left")
-    bur["HAS_BUREAU_BALANCE"] = bur["BB_HISTORY_LEN"].notna().astype(
-        np.int8
-    )
+    bur["HAS_BUREAU_BALANCE"] = bur["BB_HISTORY_LEN"].notna().astype(np.int8)
 
     # Flag / clip anomalous negative debt and limit values
     for col in ("AMT_CREDIT_SUM_DEBT", "AMT_CREDIT_SUM_LIMIT"):
@@ -78,9 +76,7 @@ def aggregate_bureau(
     closed = (bur["CREDIT_ACTIVE"] == "Closed").astype(np.int8)
     bur["BUREAU_ACTIVE"] = active
     bur["BUREAU_CLOSED"] = closed
-    bur["BUREAU_OVERDUE"] = (bur["CREDIT_DAY_OVERDUE"] > 0).astype(
-        np.int8
-    )
+    bur["BUREAU_OVERDUE"] = (bur["CREDIT_DAY_OVERDUE"] > 0).astype(np.int8)
 
     numeric_aggs = {
         SK_ID_BUREAU: "count",
@@ -106,9 +102,7 @@ def aggregate_bureau(
     }
     # Keep only available columns
     use_aggs = {
-        k: v
-        for k, v in numeric_aggs.items()
-        if k == SK_ID_BUREAU or k in bur.columns
+        k: v for k, v in numeric_aggs.items() if k == SK_ID_BUREAU or k in bur.columns
     }
     num = bur.groupby(SK_ID_CURR).agg(use_aggs)
     num.columns = [
@@ -123,16 +117,12 @@ def aggregate_bureau(
     cat_parts: List[pd.DataFrame] = [num]
     if "CREDIT_ACTIVE" in bur.columns:
         cat_parts.append(
-            _onehot_counts(
-                bur, "CREDIT_ACTIVE", "BUREAU_CREDIT_ACTIVE", SK_ID_CURR
-            )
+            _onehot_counts(bur, "CREDIT_ACTIVE", "BUREAU_CREDIT_ACTIVE", SK_ID_CURR)
         )
     if "CREDIT_TYPE" in bur.columns:
         # Limit rare types explosion: top categories only via get_dummies
         cat_parts.append(
-            _onehot_counts(
-                bur, "CREDIT_TYPE", "BUREAU_CREDIT_TYPE", SK_ID_CURR
-            )
+            _onehot_counts(bur, "CREDIT_TYPE", "BUREAU_CREDIT_TYPE", SK_ID_CURR)
         )
 
     out = cat_parts[0]

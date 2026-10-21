@@ -63,9 +63,7 @@ def test_build_features_contract(tiny_home_credit_data: HomeCreditData) -> None:
     assert np.isfinite(bundle.X_train.to_numpy(dtype=float)).all()
 
     # Protected attributes encoded into X
-    gender_cols = [
-        c for c in bundle.X_train.columns if "CODE_GENDER" in c
-    ]
+    gender_cols = [c for c in bundle.X_train.columns if "CODE_GENDER" in c]
     assert gender_cols, "Expected encoded CODE_GENDER columns in X"
     assert "num__DAYS_BIRTH" in bundle.X_train.columns
 

@@ -34,8 +34,7 @@ def _require_file(directory: Path, name: str) -> Path:
     path = directory / name
     if not path.exists():
         raise FileNotFoundError(
-            f"Missing feature artifact: {path}. "
-            "Run: python -m src.features.pipeline"
+            f"Missing feature artifact: {path}. " "Run: python -m src.features.pipeline"
         )
     return path
 
@@ -85,13 +84,9 @@ def load_training_data(features_dir: PathLike) -> TrainingData:
 
     n = len(X)
     if len(y) != n:
-        raise ValueError(
-            f"Row count mismatch: X_train={n}, y_train={len(y)}"
-        )
+        raise ValueError(f"Row count mismatch: X_train={n}, y_train={len(y)}")
     if len(ids) != n:
-        raise ValueError(
-            f"Row count mismatch: X_train={n}, ids_train={len(ids)}"
-        )
+        raise ValueError(f"Row count mismatch: X_train={n}, ids_train={len(ids)}")
 
     if ids.duplicated().any():
         dupes = int(ids.duplicated().sum())
@@ -110,24 +105,16 @@ def load_training_data(features_dir: PathLike) -> TrainingData:
         raise ValueError("TARGET contains missing values")
 
     # Numeric, finite features
-    non_numeric = [
-        c
-        for c in X.columns
-        if not pd.api.types.is_numeric_dtype(X[c])
-    ]
+    non_numeric = [c for c in X.columns if not pd.api.types.is_numeric_dtype(X[c])]
     if non_numeric:
-        raise ValueError(
-            f"X_train has non-numeric columns: {non_numeric[:5]}"
-        )
+        raise ValueError(f"X_train has non-numeric columns: {non_numeric[:5]}")
 
     values = X.to_numpy(dtype=float)
     if not np.isfinite(values).all():
         bad_cols = [
             c for c in X.columns if not np.isfinite(X[c].to_numpy(dtype=float)).all()
         ]
-        raise ValueError(
-            f"X_train has non-finite values in columns: {bad_cols[:5]}"
-        )
+        raise ValueError(f"X_train has non-finite values in columns: {bad_cols[:5]}")
 
     feature_names = list(X.columns)
     _validate_protected_columns(feature_names)

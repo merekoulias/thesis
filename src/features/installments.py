@@ -24,9 +24,7 @@ def aggregate_installments(installments: pd.DataFrame) -> pd.DataFrame:
     ).astype(np.int8)
 
     # Delay: entry - due (positive => late). Missing entry => unpaid.
-    inst["PAYMENT_DELAY"] = (
-        inst["DAYS_ENTRY_PAYMENT"] - inst["DAYS_INSTALMENT"]
-    )
+    inst["PAYMENT_DELAY"] = inst["DAYS_ENTRY_PAYMENT"] - inst["DAYS_INSTALMENT"]
     inst["IS_LATE"] = (inst["PAYMENT_DELAY"] > 0).astype(np.int8)
 
     # Collapse partial payments for the same scheduled installment

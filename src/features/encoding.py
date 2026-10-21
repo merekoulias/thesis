@@ -135,12 +135,7 @@ class FeatureEncoder:
 
         X_fit = X.copy()
         for col in categorical:
-            X_fit[col] = (
-                X_fit[col]
-                .astype("string")
-                .fillna(MISSING_TOKEN)
-                .astype(str)
-            )
+            X_fit[col] = X_fit[col].astype("string").fillna(MISSING_TOKEN).astype(str)
 
         transformers = []
         if numeric:
@@ -203,9 +198,7 @@ class FeatureEncoder:
         for col in self.categorical_columns_:
             if col not in X_t.columns:
                 X_t[col] = MISSING_TOKEN
-            X_t[col] = (
-                X_t[col].astype("string").fillna(MISSING_TOKEN).astype(str)
-            )
+            X_t[col] = X_t[col].astype("string").fillna(MISSING_TOKEN).astype(str)
         # Ensure all expected columns exist
         for col in self.numeric_columns_:
             if col not in X_t.columns:
