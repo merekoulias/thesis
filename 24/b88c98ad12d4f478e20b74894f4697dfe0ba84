@@ -1,0 +1,27 @@
+.cursor/plans/multi-model-nested-cv.md
+  s_7070f9a4cd5e76::t_3d0be8b719112e 23
+src/models/run.py
+  s_7070f9a4cd5e76::t_5a1f04c438839f 1-259
+src/models/runs.py
+  s_7070f9a4cd5e76::t_a2fbb84dae2743 1-293
+src/models/summary.py
+  s_7070f9a4cd5e76::t_1c08adade33aa2 1-148
+tests/test_models_runs.py
+  s_7070f9a4cd5e76::t_899e7d948ef080 1-284
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24b88c98ad12d4f478e20b74894f4697dfe0ba84",
+  "prompts": {},
+  "sessions": {
+    "s_7070f9a4cd5e76": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9e4c10cf-22e8-4063-8cdd-e71110da2f44",
+        "model": "composer-2.5"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
