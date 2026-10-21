@@ -1,0 +1,23 @@
+.cursor/plans/multi-model-nested-cv.md
+  s_e6ee6e4d50d28c::t_30a4056a7bab69 19
+src/models/preprocessing.py
+  s_e6ee6e4d50d28c::t_da15f10b52a6da 1-78
+tests/test_models_preprocessing.py
+  s_e6ee6e4d50d28c::t_d37fcf52f0da22 1-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0be9b09c3a01c06789c67277fbe62bfb6859edee",
+  "prompts": {},
+  "sessions": {
+    "s_e6ee6e4d50d28c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "de01ca11-bddd-4ac8-9952-e8294d54f919",
+        "model": "composer-2.5"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
