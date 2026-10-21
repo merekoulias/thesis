@@ -1,0 +1,25 @@
+src/models/legacy_check.py
+  s_f09bdaa2f4bc2a::t_57878760655677 1-91
+tests/test_models_cv.py
+  s_f09bdaa2f4bc2a::t_461f43ec5e564f 1-148
+.cursor/plans/multi-model-nested-cv.md
+  s_f09bdaa2f4bc2a::t_b2947946abacb1 21
+src/models/cv.py
+  s_f09bdaa2f4bc2a::t_4ca4de82f2178b 1-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e44efe11b541fbddf448dcdb4cacb3a2839d212b",
+  "prompts": {},
+  "sessions": {
+    "s_f09bdaa2f4bc2a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "47bbde11-55fc-43d8-97e6-cc5a216533a9",
+        "model": "composer-2.5"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
