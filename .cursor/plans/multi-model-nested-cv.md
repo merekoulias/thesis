@@ -18,8 +18,8 @@ Phase commits are found with `git log --oneline --grep "phase <N>"` (no hash col
 | 1 | Types, config files, settings loader, candidate sampler | done | PASS WITH NITS (Claude Code, 2026-10-21: `validate_distribution` errors from `load_model_config` lack the file path and non-numeric uniform/loguniform bounds (e.g. YAML `1e-4` → str) raise a bare TypeError; deep-copy test does not mutate a nested value; `default_model_config_path` docstring lacks Args; fold into Phase 3's `settings.py` update) | pytest 47 passed (19 new in test_models_settings.py, full suite 5.67s); black/isort check OK; MLP sample_candidates(20,42)→20; no ground-rule-1 files touched |
 | 2 | `SignedLogStandardScaler` preprocessing | done | PASS WITH NITS (Claude Code, 2026-10-21: `constant_mask_` deviation from the reference is justified, because the reference gives std ≈ 2.2e-16 for the worked example's constant column and outputs −1 instead of 0, but it is undocumented (no "executor notes" exist; `constant_mask_` is missing from Attributes; inner `std > 0` `np.where` is dead code); `test_transform_uses_training_statistics` passes even if `transform` refits on its input (manual check reads the fitted attributes after `transform`) and does not exercise forced-zero for a train-constant column with a different validation value; `abs(col1.std()) - 1.0` typo makes that assertion one-sided; commit message differs from the plan's; real data: 252 non-binary, 0 constant columns per outer fold, 2 columns change binary status between folds, max validation |z| ≈ 1305 (`POS_LATEST_CANCELED_MEAN`); put the fixes in `models: phase 2 review fixes`) | pytest preprocessing 8 passed, full suite 57 passed (5.54s); black/isort check OK; constant-column handling extended for fp: the plan's reference gives std 2.2e-16 and output -1 for the worked example's constant column, so `constant_mask_` (via `np.ptp`) forces such columns to 0; review fixes applied (committed in `090ae74`): hand-computed training statistics and no-refit check in `test_transform_uses_training_statistics`, new `test_constant_training_column_stays_zero_for_new_values`, two-sided std assertion, `constant_mask_` documented, dead `np.where` removed; pytest 58 passed |
 | 3 | Model registry and `fit_predict` adapter | done | PASS WITH NITS (Claude Code, 2026-10-21: `settings.py` dropped `Tuple` from the typing import but `_CV_KEYS: Tuple[str, ...]` still uses it — import works only because Python 3.14 evaluates annotations lazily; `settings.__annotations__` raises NameError and Python < 3.14 fails on import → re-add `Tuple`; importance functions `zip` without `strict=True` silently truncate on a feature-name length mismatch, and `test_importance_frames` checks row counts only, not feature order/values; `test_mlp_convergence_warning_suppressed` has no control showing the warning fires unsuppressed (verified by hand: 1 warning with the flag off); no test that `sample_weight=None` passes no fit kwargs (verified by hand: `{}`); `fit_predict` Returns docstring omits `train_proba` and is 93 cols; `early_stopping_rounds` without `eval_set` silently ignored; 10 `X does not have valid feature names` UserWarnings are a lightgbm 4.6 + sklearn 1.9 quirk (numpy fit sets `feature_names_in_` = `Column_i`), harmless, not to be suppressed here; commit message differs from the plan's; Phase 2 Notes still say "uncommitted" although the fixes are in `090ae74` (not named `phase 2 review fixes`); put the fixes in `models: phase 3 review fixes`) | pytest registry+settings 48 passed, full suite 85 passed (5.87s); black/isort check OK; `grep KNOWN_MODELS/EARLY_STOPPING` settings.py empty; `.fit(` only registry.py + training.py; 27 tests in test_models_registry.py; LGBM tests emit sklearn feature-name warnings on numpy X_pred (10 warnings); review fixes applied (committed in `dcb748a`): `Tuple` import restored, `zip(strict=True)` in importance functions, importance order/value test, unsuppressed control in the convergence-warning test, no-extra-fit-kwargs test, `early_stopping_rounds` without `eval_set` now raises (+ test), docstring Returns/Raises; pytest 87 passed (29 in test_models_registry.py), black/isort OK |
-| 4 | Generic CV core and legacy equivalence check | done | PASS WITH NITS (Claude Code, 2026-10-21: legacy_check re-run by reviewer → EQUIVALENT, AUC 0.784122 both, iterations [240, 411, 297, 349, 527] both, max \|Δp\| 0, exit 0, 4:30 wall; `legacy_check.main(argv: Sequence[str] = None)` needs `Optional[Sequence[str]]`; `_validation_parts_overlap` is a per-row Python loop (0.18 s on 307k rows) → vectorize with `np.bincount`, type `seen`; `cross_val_predict_model` rebuilds an identical `FitOutput` (fit_predict already returns `estimator=None`) → append `fit_out` directly; `make_stratified_splits` / `legacy_check.main` docstrings lack Google Args/Returns sections; test uses literal `"y_pred_proba"` instead of `OOF_PROBA_COL`; cv.py docstring rephrase vs P4.1 is benign (the plan's own text fails its grep); commit message differs from the plan's (double space, title); Phase 3 fixes were committed as `dcb748a` "Enhance model registry…", not `models: phase 3 review fixes`, and Phase 3 Notes still say "uncommitted"; 5 sklearn `X does not have valid feature names` warnings per legacy_check run are the known Phase 3 lightgbm/sklearn quirk; put the fixes in `models: phase 4 review fixes`) | pytest 95 passed (8 new in test_models_cv.py, full suite 6.24s); black/isort check OK; legacy_check: legacy OOF AUC = 0.784122 \| new OOF AUC = 0.784122; best iterations [240, 411, 297, 349, 527] both; folds identical = True; max \|Δp\| = 0.000e+00; EQUIVALENT (~4.6 min wall); grep cv.py lgbm/LGBM/lightgbm empty (docstring rephrased vs P4.1 to satisfy); review fixes applied (uncommitted): `Optional[Sequence[str]]` for `legacy_check.main`, vectorised overlap check (`np.unique`), `fits.append(fit_out)`, Google Args/Returns docstrings, `OOF_PROBA_COL` in the test, Phase 3 Notes corrected; re-run after fixes: black/isort OK, pytest 95 passed |
-| 5 | Nested CV with checkpoint/resume and top-k refits | done | | pytest metrics+nested 24 passed in 13.0s (<60s); full suite 119 passed in 17.4s; black/isort check OK; grep outer_va: X[outer_va] only in fit_predict (line 367) plus allowed y[outer_va]/oof/fold/disjoint uses; no print in nested.py |
+| 4 | Generic CV core and legacy equivalence check | done | PASS WITH NITS (Claude Code, 2026-10-21: legacy_check re-run by reviewer → EQUIVALENT, AUC 0.784122 both, iterations [240, 411, 297, 349, 527] both, max \|Δp\| 0, exit 0, 4:30 wall; `legacy_check.main(argv: Sequence[str] = None)` needs `Optional[Sequence[str]]`; `_validation_parts_overlap` is a per-row Python loop (0.18 s on 307k rows) → vectorize with `np.bincount`, type `seen`; `cross_val_predict_model` rebuilds an identical `FitOutput` (fit_predict already returns `estimator=None`) → append `fit_out` directly; `make_stratified_splits` / `legacy_check.main` docstrings lack Google Args/Returns sections; test uses literal `"y_pred_proba"` instead of `OOF_PROBA_COL`; cv.py docstring rephrase vs P4.1 is benign (the plan's own text fails its grep); commit message differs from the plan's (double space, title); Phase 3 fixes were committed as `dcb748a` "Enhance model registry…", not `models: phase 3 review fixes`, and Phase 3 Notes still say "uncommitted"; 5 sklearn `X does not have valid feature names` warnings per legacy_check run are the known Phase 3 lightgbm/sklearn quirk; put the fixes in `models: phase 4 review fixes`) | pytest 95 passed (8 new in test_models_cv.py, full suite 6.24s); black/isort check OK; legacy_check: legacy OOF AUC = 0.784122 \| new OOF AUC = 0.784122; best iterations [240, 411, 297, 349, 527] both; folds identical = True; max \|Δp\| = 0.000e+00; EQUIVALENT (~4.6 min wall); grep cv.py lgbm/LGBM/lightgbm empty (docstring rephrased vs P4.1 to satisfy); review fixes applied (committed in `2f2c432`): `Optional[Sequence[str]]` for `legacy_check.main`, vectorised overlap check (`np.unique`), `fits.append(fit_out)`, Google Args/Returns docstrings, `OOF_PROBA_COL` in the test, Phase 3 Notes corrected; re-run after fixes: black/isort OK, pytest 95 passed |
+| 5 | Nested CV with checkpoint/resume and top-k refits | done | PASS WITH NITS (Claude Code, 2026-10-21: leakage audit clean — `X[outer_va]` only as refit `X_pred`, inner CV gets `X[outer_tr]` only, refit has no `eval_set`, in-sample proba on outer-train rows only; checkpoint and in-memory paths give identical rankings/OOF; reviewer re-ran: pytest metrics+nested 24 passed in 11.7 s, full suite 119 passed, black/isort OK. Minors: without a checkpoint `inner_scores` has all-`object` dtypes (`best_iteration` holds `None`; built by `pd.concat` onto an empty frame) vs int/float from the CSV → collect rows in a list, build one frame with `INNER_SCORE_COLUMNS`, cast `best_iteration` to float64; `resume=True` with no `candidates.json` raises `FileNotFoundError`, contradicting the docstring ("if the checkpoint exists") and crashing the Phase 6 `--resume` path for a run dir without `tuning/` → start fresh instead; `candidates.json` is written before the orphan-CSV `FileExistsError` (side effect) → check both files before writing; torn last CSV row (e.g. `1,0,`) counts as a complete pair and changed the rank-1 selection in a reviewer test → also require `inner_fold` = {0..n−1} and no NaN `roc_auc`/`fit_seconds` when pruning; resume only fingerprints the candidates: changed `n_outer_folds` or different data/`--max-rows` silently reuse old scores (verified) → store and compare a fingerprint (cv_settings, n_samples, n_features, hash of ids/y) or guard it in Phase 6 `run.py`; ES model with `mean_best_iteration is None` silently refits with `n_estimators` 2000 → raise; `test_outer_validation_used_only_for_prediction` uses rf, asserts `≤ max outer-train` and never checks `eval_set` → use lgbm, exact per-fold sizes, assert no `eval_set` in refit calls; "best cand %02d" logs `cid + 1` while files use 0-based ids → log the id. Nits: ranking test recomputes from the same dict and never checks `mean_inner_auc` against `inner_scores` nor `ranking == [0, 1, 2]` under the tie; feature-importance test does not prove rank-1 only (row count); resume test could assert exactly 6 calls; non-ES log shows `best_it 0`; fold-AUC log not rounded; lines > 88 (metrics.py:39, :102; nested.py:47, :232); `reference_metrics` returns inf and `summarize_folds([])` zeros instead of raising; tests use `list[int]`; commit message differs from the plan's; Phase 4 fixes committed as `2f2c432` "Enhance documentation…", not `models: phase 4 review fixes`, and Phase 4 Notes still say "uncommitted"; put the fixes in `models: phase 5 review fixes`) | pytest metrics+nested 24 passed in 13.0s (<60s); full suite 119 passed in 17.4s; black/isort check OK; grep outer_va: X[outer_va] only in fit_predict (line 367) plus allowed y[outer_va]/oof/fold/disjoint uses; no print in nested.py; review fixes applied (uncommitted): all minors and nits fixed — `inner_scores` built from a row list with canonical dtypes in both paths; `resume=True` without a checkpoint starts fresh; checkpoint files are checked before anything is written; pruning requires `inner_fold` = 0..n−1 and no missing `roc_auc`/`fit_seconds`; new `fingerprint.json` (model, seed, folds, `fixed_params`, `early_stopping_rounds`, n_samples/n_features, data sha256) must match on resume (plan 5.8 tree and P5.1/P5.2/P5.4 updated); early-stopping model without a recorded best iteration raises; log shows the 0-based candidate id, `-` for non-ES best_it and rounded fold AUCs; `reference_metrics` / `summarize_folds` raise on single-class / empty input; lines ≤ 88; stronger tests (exact-array leakage spy on lgbm, tie/ranking tests, torn-row, fingerprint, dtype, exact resume call counts, importance row count); pytest 132 passed, black/isort OK |
 | 6 | Run persistence, CLI, summary, smoke runs | todo | | |
 | 7 | Full runs (4 models) | todo | | |
 | 8 | Cleanup of unneeded code, files and dependencies | todo | | |
@@ -174,7 +174,7 @@ src.models.runs.save_nested_run()
 artifacts/runs/<model>/baseline/
    oof_predictions.parquet   (rank 1)        ◄── later: src/fairness/ reads this
    metrics.json, selected_params.json, run_config.json, feature_importance.parquet
-   tuning/{candidates.json, inner_scores.csv, rankings.json}
+   tuning/{candidates.json, fingerprint.json, inner_scores.csv, rankings.json}
    robustness/rank_{2..5}/{oof_predictions.parquet, metrics.json, selected_params.json}
    run.log
 ```
@@ -476,6 +476,7 @@ artifacts/runs/<model>/baseline/
   run.log
   tuning/
     candidates.json
+    fingerprint.json         # written by run_nested_cv when checkpointing (resume guard)
     inner_scores.csv
     rankings.json
   robustness/
@@ -1269,8 +1270,9 @@ def run_nested_cv(
         model_config: Model config (fixed params, defaults, search space).
         cv_settings: Shared nested-CV settings.
         checkpoint_dir: If given, tuning progress is appended to
-            checkpoint_dir / "inner_scores.csv" and candidates are written to
-            checkpoint_dir / "candidates.json".
+            checkpoint_dir / "inner_scores.csv"; the candidates and a fingerprint of the
+            run (CV settings, fixed params, data hash) are written to
+            checkpoint_dir / "candidates.json" and "fingerprint.json".
         resume: If True and the checkpoint exists, skip finished
             (outer_fold, candidate_id) pairs.
 
@@ -1298,8 +1300,16 @@ outer_splits = make_stratified_splits(y, cv_settings.n_outer_folds, cv_settings.
 # candidates.json: if it exists and resume=True, it must equal [{"candidate_id": i, "params": c}]
 #   (compare after json round-trip); otherwise raise ValueError("Search candidates changed ...").
 # If it exists and resume=False: raise FileExistsError (the CLI handles --overwrite).
+#   Check candidates.json, inner_scores.csv and fingerprint.json BEFORE writing anything.
+# fingerprint.json: {model, seed, n_outer_folds, n_inner_folds, fixed_params,
+#   early_stopping_rounds, n_samples, n_features, data_sha256}; on resume it must equal this
+#   run's fingerprint, else ValueError("Checkpoint does not match this run (changed: ...)").
+#   top_k is not part of it (it only affects the refits).
 # inner_scores.csv: if resume, read it; keep only (outer_fold, candidate_id) groups with exactly
-#   n_inner_folds rows; rewrite the file with those rows (drops a half-finished pair).
+#   n_inner_folds rows (inner_fold values exactly 0..n_inner-1, no missing roc_auc/fit_seconds,
+#   so a torn last line is dropped too); rewrite the file with those rows.
+# resume=True with no checkpoint files yet is NOT an error: start fresh (the Phase 7 chain
+#   always passes --resume, also for models that have not started).
 
 for k, (outer_tr, outer_va) in enumerate(outer_splits):
     X_tr, y_tr = X[outer_tr], y[outer_tr]
@@ -1396,15 +1406,22 @@ Use `make_training_data(n_samples=300)`, `tiny_model_configs`, and `CVSettings(s
 | ---- | ------- |
 | `test_nested_oof_contract` (parametrized over 4 models) | `runs[1].oof_predictions` columns `[SK_ID_CURR, TARGET, y_pred_proba, fold]`; 300 rows; no NaN; probas in [0, 1]; `fold` values `{0,1,2}` and equal to the fold of `make_stratified_splits(y, 3, 42)`; `SK_ID_CURR` equals `data.ids` in order |
 | `test_nested_inner_scores_shape` | `len(inner_scores) == 3 * 3 * 2`, columns == `INNER_SCORE_COLUMNS`; `best_iteration` all NaN for `rf`, all ≥ 1 for `lgbm` |
-| `test_ranking_matches_mean_inner_auc` | for each outer fold, `ranking[0]` has the max mean inner AUC; ties broken by smaller id (construct a tie by monkeypatching `roc_auc_score` in `src.models.nested` to return 0.5) |
+| `test_ranking_ties_broken_by_smaller_candidate_id`, `test_ranking_matches_inner_scores` | with `roc_auc_score` patched to 0.5 every ranking is `[0, 1, 2]`; without the patch `mean_inner_auc` equals the per-candidate mean of `inner_scores` and `ranking` is sorted by `(-auc, id)` |
 | `test_top_k_runs` | `set(runs) == {1, 2}`; rank 2 uses `ranking[1]` in each fold (`selected[k]["candidate_id"]`) |
 | `test_lgbm_refit_uses_mean_best_iteration` | `selected[k]["params"]["n_estimators"] == round(mean_best_iteration[cid])` |
 | `test_inner_splits_never_touch_outer_validation` | for each outer split: every index from `inner_splits_absolute(...)` ∈ `outer_tr`, ∩ `outer_va` = ∅, inner validation parts partition `outer_tr` |
-| `test_outer_validation_used_only_for_prediction` | monkeypatch `src.models.nested.fit_predict` and `src.models.nested.cross_val_predict_model` with spies that record `len(X_train)` / `len(X)`; assert every training size is ≤ the outer-train size and the inner CV only ever receives arrays of outer-train length |
+| `test_outer_validation_used_only_for_prediction` | with `lgbm`, spy on `src.models.nested.fit_predict` and `cross_val_predict_model`: every inner-CV call receives exactly `X[outer_tr]` and its validation parts partition it; every refit call trains on exactly `X[outer_tr]`, predicts exactly `X[outer_va]` and gets no `eval_set` / `early_stopping_rounds` |
 | `test_nested_deterministic` | two runs → identical `oof_predictions` and identical `inner_scores` except `fit_seconds` |
-| `test_resume_gives_identical_result` | run with `checkpoint_dir=tmp_path`; truncate `inner_scores.csv` to header + first 7 rows (leaves a half-finished pair); rerun with `resume=True` → identical rank-1 OOF and identical `roc_auc` column; and the resumed run performed fewer `cross_val_predict_model` calls than 9 (spy) |
+| `test_resume_gives_identical_result` | run with `checkpoint_dir=tmp_path`; truncate `inner_scores.csv` to header + first 7 rows (leaves a half-finished pair); rerun with `resume=True` → identical rank-1 OOF and identical `roc_auc` column; and the uninterrupted run made exactly 9 and the resumed run exactly 6 `cross_val_predict_model` calls (spy) |
 | `test_resume_with_changed_candidates_raises` | after a checkpointed run, rerun with a different `default_params` and `resume=True` → `ValueError` |
 | `test_existing_checkpoint_without_resume_raises` | `FileExistsError` |
+| `test_resume_without_checkpoint_starts_fresh` | `resume=True` on an empty `checkpoint_dir` runs normally and equals a run with `resume=False` |
+| `test_resume_drops_torn_last_row` (cut at 4 / 12 / 40 characters) | a torn last CSV line is dropped; resumed rankings, `roc_auc` column and OOF equal the uninterrupted run |
+| `test_resume_with_orphan_scores_raises`, `test_orphan_scores_without_resume_leave_no_files` | `inner_scores.csv` without `candidates.json`: `ValueError` on resume, `FileExistsError` otherwise; no checkpoint file is written |
+| `test_resume_with_changed_run_raises` | changed `n_outer_folds`, data or `fixed_params` → `ValueError`; changed `top_k` is allowed |
+| `test_inner_scores_dtypes_match_with_and_without_checkpoint` | identical columns and dtypes (`best_iteration` float64) in both paths |
+| `test_early_stopping_model_without_best_iteration_raises` | `ValueError` instead of a silent default `n_estimators` |
+| `test_candidates_json_is_list_of_id_and_params` | stored candidates equal `result.candidates` |
 | `test_fold_metrics` (parametrized over 4 models) | each `runs[r].fold_metrics` has one dict per outer fold with all keys of 5.10; `val_roc_auc == fold_roc_aucs[k]`; `roc_auc_gap == train_roc_auc − val_roc_auc`; `oof_brier`, `oof_log_loss` equal `classification_metrics` on the OOF frame |
 | `test_feature_importance_rank1_only` | `lgbm`: `feature_importance` has `fold` values `{0,1,2}`, types `{gain, split}`; `mlp`: `None` |
 
@@ -1443,7 +1460,8 @@ def save_nested_run(result: NestedCVResult, run_dir: PathLike, run_config: Dict[
     """Write the run directory (plan 5.8). Rank 1 at the top level; ranks >= 2 under
     robustness/rank_<r>/. Writes tuning/rankings.json from result.selections.
     tuning/candidates.json and tuning/inner_scores.csv are (re)written from the result
-    so a run without checkpointing is still complete."""
+    so a run without checkpointing is still complete (tuning/fingerprint.json is only
+    written by run_nested_cv when it checkpoints)."""
 
 
 def load_oof(run_dir: PathLike, rank: int = 1) -> pd.DataFrame:
@@ -1478,7 +1496,7 @@ python -m src.models.run --model {lgbm,rf,logreg,mlp}
 3. `--max-rows N`: stratified subsample with `train_test_split(np.arange(n), train_size=N, stratify=y, random_state=cv_settings.seed)`; sort the selected indices; rebuild `TrainingData` with `reset_index(drop=True)`. **Guard:** if `--max-rows` is given and `Path(runs_dir).resolve() == (repo_root / "artifacts/runs").resolve()`, exit with error `"--max-rows requires a --runs-dir other than artifacts/runs"`.
 4. `run_dir = run_dir_for(runs_dir, model)`. If `run_dir / METRICS_FILE` exists or `run_dir / "tuning"` exists:
    - `--overwrite` → `shutil.rmtree(run_dir)`;
-   - `--resume` → continue;
+   - `--resume` → continue (and if the run directory does not exist yet, `--resume` simply starts a fresh run);
    - neither → exit with error `"Run directory exists: <path>. Use --resume or --overwrite."`.
 5. Logging: `logging.basicConfig(level=INFO, format="%(asctime)s %(levelname)s %(message)s")` + a `FileHandler(run_dir / "run.log", mode="a", encoding="utf-8")`.
 6. `result = run_nested_cv(data, model_config, cv_settings, checkpoint_dir=run_dir / "tuning", resume=args.resume)`.
@@ -1567,18 +1585,26 @@ Run **one model at a time** (each uses all CPU cores). Recommended order and rou
 | 3 | `python -m src.models.run --model mlp` | ~2–4 h |
 | 4 | `python -m src.models.run --model rf` | ~4–7 h |
 
-Start all four as **one sequential background chain** (`caffeinate -i` keeps macOS awake; the chain stops at the first failure):
+**Phase 7a is run by the user, not by the executor.** The user starts all four models as **one sequential, resumable background chain** in the macOS Terminal app (not in Cursor's integrated terminal, so closing Cursor or the agent chat cannot kill it). Before starting: Phases 0–6 done and reviewed, laptop on mains power, lid open, automatic macOS updates deferred for the night.
 
 ```bash
+cd <repo root>
+source .venv/bin/activate
 mkdir -p artifacts/runs
-nohup caffeinate -i sh -c 'for m in logreg lgbm mlp rf; do python -m src.models.run --model "$m" || exit 1; done' \
-  > artifacts/runs/full_runs_stdout.log 2>&1 &
-tail -f artifacts/runs/logreg/baseline/run.log
+nohup caffeinate -ims sh -c 'for m in logreg lgbm mlp rf; do [ -f "artifacts/runs/$m/baseline/metrics.json" ] && continue; python -m src.models.run --model "$m" --resume || exit 1; done' \
+  >> artifacts/runs/full_runs_stdout.log 2>&1 &
+tail -f artifacts/runs/logreg/baseline/run.log      # Ctrl-C stops only the viewing, not the runs
 ```
 
-If a run stops (crash, reboot), restart the chain for the remaining models with `--resume` on the interrupted one, e.g. `python -m src.models.run --model mlp --resume`, then the others. The executor only starts the chain and checks the first log lines (Phase 7a); the outputs are verified after it finishes (Phase 7b, see section 6.2). The user may also run the commands manually.
+- The chain runs the models **one after another** (each uses all cores) and stops at the first failure.
+- Models whose `metrics.json` already exists are skipped, and `--resume` continues an interrupted model from its checkpoint (on a model that has not started yet it simply starts fresh). So **the same command both starts and restarts the chain** after a crash, reboot or sleep.
+- `caffeinate -ims` keeps the Mac awake only while the chain runs and stops by itself when it ends; nothing needs to be reverted.
+- Check progress: `tail -n 20 artifacts/runs/full_runs_stdout.log`, `ls artifacts/runs/*/baseline/metrics.json`, `pgrep -fl src.models.run`.
+- Stop deliberately: `pkill -INT -f src.models.run` (the chain then exits; restart later with the same command).
 
-After all four: `python -m src.models.summary`.
+When `artifacts/runs/rf/baseline/metrics.json` exists and `full_runs_stdout.log` has no traceback, the user sends the Phase 7b prompt (section 6.2) to the executor, which verifies the outputs and commits the Progress-log update.
+
+After all four (in Phase 7b): `python -m src.models.summary`.
 
 **Exit criteria**
 
@@ -1705,7 +1731,7 @@ Execute Phase <N> ("<TITLE>") of .cursor/plans/multi-model-nested-cv.md, and onl
 | 4 | `python -m src.models.legacy_check` runs on the full data (two 5-fold LightGBM CVs, ~4–5 min, ~3 GB RAM). Run it in the foreground and paste its full output into the Notes. |
 | 5 | The most important phase for correctness. Follow the algorithm in P5.2 line by line and the leakage rules under it. Write the tests in the order of the table and run them as you go. |
 | 6 | Smoke runs take about 10–30 min in total. Use the background + `kill -INT` recipe in P6.5 for the resume check (no manual Ctrl-C needed). Write down the uninterrupted `logreg` smoke AUC before the interrupted run. |
-| 7a | Start: check the precondition, start the sequential background chain from Phase 7, wait until `artifacts/runs/logreg/baseline/run.log` shows at least three `cand` lines, paste them into the Notes, set the status to `in progress`, and stop. Do not wait for the runs, do not commit. Reply "Phase 7 runs started." |
+| 7a | **Not sent to the executor: the user starts the runs manually** with the command in Phase 7. The executor does nothing in 7a. |
 | 7b | Verify (send when the chain has finished: `artifacts/runs/rf/baseline/metrics.json` exists and `artifacts/runs/full_runs_stdout.log` has no traceback): run `python -m src.models.summary`, check every exit criterion of Phase 7 with a short Python script (show the script and its output), fill in the Notes, set `done`, commit the Progress-log update as "models: phase 7 - full runs". If a run failed, report the traceback and stop. |
 | 8 | Run `git grep` for every item before removing it. For item 9 (`artifacts/models/`), ask me and wait for the answer; delete only on an explicit yes. |
 | 9 | Documentation only; no code changes. Use the Phase 7 summary table from the Notes for the Results section. |

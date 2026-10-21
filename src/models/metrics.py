@@ -36,30 +36,29 @@ def classification_metrics(y_true: np.ndarray, proba: np.ndarray) -> Dict[str, f
 
 
 def reference_metrics(y_true: np.ndarray) -> Dict[str, float]:
-    """Return {"base_rate", "brier_reference", "log_loss_reference"} for predicting the base rate.
+    """Return the no-skill references for predicting the base rate for everyone.
 
     Args:
         y_true: Binary labels, shape (n,).
 
     Returns:
-        No-skill reference values for the empirical base rate.
+        {"base_rate", "brier_reference", "log_loss_reference"} for the empirical
+        base rate.
+
+    Raises:
+        ValueError: If ``y_true`` has a single class (log loss reference undefined).
     """
     y_true = np.asarray(y_true)
+    _validate_binary_labels(y_true)
     base_rate = float(np.mean(y_true))
     brier_reference = base_rate * (1.0 - base_rate)
-    if base_rate in (0.0, 1.0):
-        log_loss_reference = float("inf")
-    else:
-        log_loss_reference = float(
-            -(
-                base_rate * math.log(base_rate)
-                + (1.0 - base_rate) * math.log(1.0 - base_rate)
-            )
-        )
+    log_loss_reference = -(
+        base_rate * math.log(base_rate) + (1.0 - base_rate) * math.log(1.0 - base_rate)
+    )
     return {
         "base_rate": base_rate,
         "brier_reference": float(brier_reference),
-        "log_loss_reference": log_loss_reference,
+        "log_loss_reference": float(log_loss_reference),
     }
 
 
@@ -99,21 +98,20 @@ def fold_fit_diagnostics(
 
 
 def summarize_folds(folds: Sequence[Dict[str, Any]]) -> Dict[str, float]:
-    """Return mean_roc_auc_gap, mean_brier_gap, mean_log_loss_gap, mean_selection_optimism.
+    """Return the means of the three gaps and the selection optimism over folds.
 
     Args:
         folds: One dict per outer fold from ``fold_fit_diagnostics`` (plus metadata).
 
     Returns:
-        Means of the four gap-related metrics across folds.
+        {"mean_roc_auc_gap", "mean_brier_gap", "mean_log_loss_gap",
+        "mean_selection_optimism"}.
+
+    Raises:
+        ValueError: If ``folds`` is empty.
     """
     if not folds:
-        return {
-            "mean_roc_auc_gap": 0.0,
-            "mean_brier_gap": 0.0,
-            "mean_log_loss_gap": 0.0,
-            "mean_selection_optimism": 0.0,
-        }
+        raise ValueError("folds must not be empty")
     return {
         "mean_roc_auc_gap": float(np.mean([f["roc_auc_gap"] for f in folds])),
         "mean_brier_gap": float(np.mean([f["brier_gap"] for f in folds])),

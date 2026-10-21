@@ -79,3 +79,13 @@ def test_summarize_folds():
 def test_single_class_raises():
     with pytest.raises(ValueError):
         classification_metrics(np.zeros(5), np.full(5, 0.5))
+
+
+def test_reference_metrics_single_class_raises():
+    with pytest.raises(ValueError):
+        reference_metrics(np.zeros(5))
+
+
+def test_summarize_folds_empty_raises():
+    with pytest.raises(ValueError):
+        summarize_folds([])
