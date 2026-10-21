@@ -1,0 +1,6 @@
+# Tiny settings for smoke runs on a subsample (never used for thesis results).
+seed: 42
+n_outer_folds: 3
+n_inner_folds: 2
+n_configs: 3
+top_k: 2

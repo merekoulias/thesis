@@ -1,0 +1,18 @@
+# Random forest credit scorer. n_estimators is fixed (not a tuning parameter for RF).
+name: rf
+early_stopping_rounds: null
+fixed_params:
+  n_estimators: 200
+  criterion: gini
+  bootstrap: true
+  n_jobs: -1
+default_params:
+  max_features: sqrt
+  min_samples_leaf: 50
+  max_depth: null
+  max_samples: null
+search_space:
+  max_features: {dist: choice, values: [sqrt, log2, 0.05, 0.1]}
+  min_samples_leaf: {dist: int_loguniform, low: 5, high: 300}
+  max_depth: {dist: choice, values: [null, 12, 20, 30]}
+  max_samples: {dist: choice, values: [null, 0.5, 0.75]}

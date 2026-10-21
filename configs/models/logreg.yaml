@@ -1,0 +1,12 @@
+# L2 logistic regression. SignedLogStandardScaler is applied inside the pipeline.
+# scikit-learn >= 1.8 deprecates `penalty`; the default l1_ratio=0.0 is pure L2, so neither is set.
+name: logreg
+early_stopping_rounds: null
+fixed_params:
+  solver: lbfgs
+  max_iter: 2000
+  tol: 0.0001
+default_params:
+  C: 1.0
+search_space:
+  C: {dist: loguniform, low: 0.0001, high: 10.0}

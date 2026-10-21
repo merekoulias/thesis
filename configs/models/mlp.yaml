@@ -1,0 +1,25 @@
+# MLP credit scorer. SignedLogStandardScaler is applied inside the pipeline.
+# max_iter = number of epochs and is searched; early_stopping is off because sklearn's
+# MLP early stopping monitors accuracy, which is uninformative at an 8% positive rate.
+# Pilot (164k rows): alpha=1.0, lr=1e-3, 5 epochs gave AUC 0.77; weak alpha overfits after ~10 epochs.
+name: mlp
+early_stopping_rounds: null
+fixed_params:
+  activation: relu
+  solver: adam
+  early_stopping: false
+  shuffle: true
+  tol: 0.0001
+  n_iter_no_change: 10
+default_params:
+  hidden_layer_sizes: [128, 64]
+  alpha: 1.0
+  learning_rate_init: 0.001
+  batch_size: 512
+  max_iter: 5
+search_space:
+  hidden_layer_sizes: {dist: choice, values: [[64], [128], [64, 32], [128, 64], [256, 128]]}
+  alpha: {dist: loguniform, low: 0.001, high: 10.0}
+  learning_rate_init: {dist: loguniform, low: 0.0001, high: 0.003}
+  batch_size: {dist: choice, values: [256, 512, 1024]}
+  max_iter: {dist: int_uniform, low: 3, high: 20}

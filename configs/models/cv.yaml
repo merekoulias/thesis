@@ -1,0 +1,7 @@
+# Shared nested-CV settings. Identical for every credit-scoring model (equal tuning budget).
+# See docs/decisions.md, row "Hyperparameter tuning".
+seed: 42
+n_outer_folds: 5   # same outer folds as the legacy baseline (StratifiedKFold, shuffle, seed 42)
+n_inner_folds: 3   # inner stratified CV inside each outer training fold
+n_configs: 20      # candidate 0 = default_params, candidates 1..19 = random draws
+top_k: 5           # rank 1 = main run; ranks 2..5 = robustness runs
