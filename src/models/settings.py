@@ -41,7 +41,14 @@ def default_cv_config_path() -> Path:
 
 
 def default_model_config_path(model_name: str) -> Path:
-    """Return <repo>/configs/models/<model_name>.yaml (resolved from this file's location)."""
+    """Return <repo>/configs/models/<model_name>.yaml.
+
+    Args:
+        model_name: Registry name, which is also the YAML file stem.
+
+    Returns:
+        Path resolved from this file's location.
+    """
     return _repo_root() / "configs" / "models" / f"{model_name}.yaml"
 
 
@@ -78,7 +85,8 @@ def load_cv_settings(path: PathLike) -> CVSettings:
         val = raw[key]
         if not isinstance(val, int) or isinstance(val, bool):
             raise ValueError(
-                f"{config_path}: {key} must be an int, got {val!r} ({type(val).__name__})"
+                f"{config_path}: {key} must be an int, "
+                f"got {val!r} ({type(val).__name__})"
             )
         values[key] = val
 
@@ -193,7 +201,10 @@ def load_model_config(path: PathLike) -> ModelConfig:
             raise ValueError(
                 f"{config_path}: search_space['{param_name}'] must be a mapping"
             )
-        validate_distribution(param_name, spec)
+        try:
+            validate_distribution(param_name, spec)
+        except ValueError as exc:
+            raise ValueError(f"{config_path}: {exc}") from exc
 
     early_stopping_rounds = raw.get("early_stopping_rounds")
     if name in EARLY_STOPPING_MODELS:

@@ -49,12 +49,14 @@ def test_real_model_configs_load() -> None:
 
 
 def test_sample_candidates_first_is_default() -> None:
-    default = {"C": 1.0, "x": 2}
+    default = {"C": 1.0, "x": 2, "h": [128, 64]}
     space = {"C": {"dist": "loguniform", "low": 1e-4, "high": 10.0}}
     cands = sample_candidates(default, space, 3, 42)
     assert cands[0] == default
     cands[0]["C"] = 99.0
+    cands[0]["h"].append(32)
     assert default["C"] == 1.0
+    assert default["h"] == [128, 64]
 
 
 def test_sample_candidates_deterministic() -> None:
@@ -228,6 +230,37 @@ def test_sample_candidates_json_serializable() -> None:
             },
             "loguniform needs 0 < low < high",
         ),
+        (
+            "string_bound",
+            {
+                "name": "logreg",
+                "early_stopping_rounds": None,
+                "fixed_params": {"solver": "lbfgs"},
+                "default_params": {"C": 1.0},
+                "search_space": {
+                    "C": {"dist": "loguniform", "low": "1e-4", "high": 10.0},
+                },
+            },
+            "must be numbers",
+        ),
+        (
+            "unexpected_spec_key",
+            {
+                "name": "logreg",
+                "early_stopping_rounds": None,
+                "fixed_params": {"solver": "lbfgs"},
+                "default_params": {"C": 1.0},
+                "search_space": {
+                    "C": {
+                        "dist": "uniform",
+                        "low": 0.1,
+                        "high": 1.0,
+                        "values": [1],
+                    },
+                },
+            },
+            "does not accept keys",
+        ),
     ],
 )
 def test_invalid_model_configs(
@@ -235,8 +268,9 @@ def test_invalid_model_configs(
 ) -> None:
     yaml_name = "wrong_stem" if name == "stem_mismatch" else data["name"]
     path = _write_model_yaml(tmp_path, yaml_name, data)
-    with pytest.raises(ValueError, match=match):
+    with pytest.raises(ValueError, match=match) as excinfo:
         load_model_config(path)
+    assert str(path) in str(excinfo.value)
 
 
 @pytest.mark.parametrize(

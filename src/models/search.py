@@ -25,6 +25,10 @@ def _round_sig6(value: float) -> float:
     return float(f"{value:.6g}")
 
 
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
 def validate_distribution(name: str, spec: Dict[str, Any]) -> None:
     """Raise ValueError if a search-space entry is malformed (see plan 5.4).
 
@@ -35,80 +39,60 @@ def validate_distribution(name: str, spec: Dict[str, Any]) -> None:
     Raises:
         ValueError: If the specification is invalid.
     """
+    prefix = f"search_space['{name}']"
     if "dist" not in spec:
-        raise ValueError(
-            f"search_space['{name}']: missing 'dist'; "
-            f"expected one of ({_DIST_CHOICES})"
-        )
+        raise ValueError(f"{prefix}: missing 'dist'; expected one of ({_DIST_CHOICES})")
     dist = spec["dist"]
     if dist not in SUPPORTED_DISTRIBUTIONS:
         raise ValueError(
-            f"search_space['{name}']: unknown dist '{dist}'; "
-            f"expected one of ({_DIST_CHOICES})"
+            f"{prefix}: unknown dist '{dist}'; expected one of ({_DIST_CHOICES})"
         )
 
-    if dist == "uniform":
-        if "low" not in spec or "high" not in spec:
-            raise ValueError(
-                f"search_space['{name}']: uniform requires 'low' and 'high'"
-            )
-        low, high = spec["low"], spec["high"]
-        if not low < high:
-            raise ValueError(
-                f"search_space['{name}']: uniform needs low < high, "
-                f"got low={low}, high={high}"
-            )
-    elif dist == "loguniform":
-        if "low" not in spec or "high" not in spec:
-            raise ValueError(
-                f"search_space['{name}']: loguniform requires 'low' and 'high'"
-            )
-        low, high = spec["low"], spec["high"]
-        if not (0 < low < high):
-            raise ValueError(
-                f"search_space['{name}']: loguniform needs 0 < low < high, "
-                f"got low={low}, high={high}"
-            )
-    elif dist == "int_uniform":
-        if "low" not in spec or "high" not in spec:
-            raise ValueError(
-                f"search_space['{name}']: int_uniform requires 'low' and 'high'"
-            )
-        low, high = spec["low"], spec["high"]
-        if not _is_int_not_bool(low) or not _is_int_not_bool(high):
-            raise ValueError(
-                f"search_space['{name}']: int_uniform low and high must be int, "
-                f"got low={low!r}, high={high!r}"
-            )
-        if not low < high:
-            raise ValueError(
-                f"search_space['{name}']: int_uniform needs low < high, "
-                f"got low={low}, high={high}"
-            )
-    elif dist == "int_loguniform":
-        if "low" not in spec or "high" not in spec:
-            raise ValueError(
-                f"search_space['{name}']: int_loguniform requires 'low' and 'high'"
-            )
-        low, high = spec["low"], spec["high"]
-        if not _is_int_not_bool(low) or not _is_int_not_bool(high):
-            raise ValueError(
-                f"search_space['{name}']: int_loguniform low and high must be int, "
-                f"got low={low!r}, high={high!r}"
-            )
-        if not (1 <= low < high):
-            raise ValueError(
-                f"search_space['{name}']: int_loguniform needs 1 <= low < high, "
-                f"got low={low}, high={high}"
-            )
-    elif dist == "choice":
+    allowed_keys = {"dist", "values"} if dist == "choice" else {"dist", "low", "high"}
+    unexpected = sorted(set(spec) - allowed_keys)
+    if unexpected:
+        raise ValueError(
+            f"{prefix}: {dist} does not accept keys {unexpected}; "
+            f"allowed keys are {sorted(allowed_keys)}"
+        )
+
+    if dist == "choice":
         if "values" not in spec:
-            raise ValueError(f"search_space['{name}']: choice requires 'values'")
+            raise ValueError(f"{prefix}: choice requires 'values'")
         values = spec["values"]
         if not isinstance(values, list) or len(values) == 0:
+            raise ValueError(f"{prefix}: choice needs a non-empty list 'values'")
+        return
+
+    if "low" not in spec or "high" not in spec:
+        raise ValueError(f"{prefix}: {dist} requires 'low' and 'high'")
+    low, high = spec["low"], spec["high"]
+
+    if dist in ("int_uniform", "int_loguniform"):
+        if not _is_int_not_bool(low) or not _is_int_not_bool(high):
             raise ValueError(
-                f"search_space['{name}']: choice needs a non-empty list 'values'"
+                f"{prefix}: {dist} low and high must be int, "
+                f"got low={low!r}, high={high!r}"
             )
+    elif not _is_number(low) or not _is_number(high):
+        raise ValueError(
+            f"{prefix}: {dist} low and high must be numbers, "
+            f"got low={low!r}, high={high!r}"
+        )
+
+    if dist == "loguniform" and not (0 < low < high):
+        raise ValueError(
+            f"{prefix}: loguniform needs 0 < low < high, got low={low}, high={high}"
+        )
+    if dist == "int_loguniform" and not (1 <= low < high):
+        raise ValueError(
+            f"{prefix}: int_loguniform needs 1 <= low < high, "
+            f"got low={low}, high={high}"
+        )
+    if dist in ("uniform", "int_uniform") and not low < high:
+        raise ValueError(
+            f"{prefix}: {dist} needs low < high, got low={low}, high={high}"
+        )
 
 
 def _draw_parameter(name: str, spec: Dict[str, Any], rng: np.random.Generator) -> Any:
