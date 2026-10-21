@@ -8,13 +8,13 @@
 
 ## Progress log (executor fills this in)
 
-**BASE commit** (HEAD of `main` before Phase 0; written in Phase 0): `________`
+**BASE commit** (HEAD of `main` before Phase 0; written in Phase 0): `03a9797`
 
 Phase commits are found with `git log --oneline --grep "phase <N>"` (no hash column, so the plan never needs a commit just to record a hash).
 
 | Phase | Title | Status (`todo` / `in progress` / `done`) | Review verdict | Notes |
 | ----- | ----- | ---------------------------------------- | -------------- | ----- |
-| 0 | Setup, formatter configuration and baseline snapshot | todo | | |
+| 0 | Setup, formatter configuration and baseline snapshot | in progress | | pytest pre-format: 28 passed in 7.47s |
 | 1 | Types, config files, settings loader, candidate sampler | todo | | |
 | 2 | `SignedLogStandardScaler` preprocessing | todo | | |
 | 3 | Model registry and `fit_predict` adapter | todo | | |
