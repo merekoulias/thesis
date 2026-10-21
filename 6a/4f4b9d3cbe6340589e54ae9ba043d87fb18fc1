@@ -1,0 +1,23 @@
+src/models/search.py
+  s_9427adb9aa56bc::t_001ccdcc6373fd 28-31,42,44,48,51-59,61,64-72,74-75,77-95
+src/models/settings.py
+  s_9427adb9aa56bc::t_daa9a10fd7a774 44-51,88-89,204-207
+tests/test_models_settings.py
+  s_9427adb9aa56bc::t_c2f189c3fc0965 52,57,59,233-263,271,273
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6a4f4b9d3cbe6340589e54ae9ba043d87fb18fc1",
+  "prompts": {},
+  "sessions": {
+    "s_9427adb9aa56bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9fb7a6f7-392c-4fea-a41b-185c8607deed",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
