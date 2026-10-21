@@ -22,7 +22,7 @@ def test_nonbinary_columns_standardized() -> None:
     out = scaler.fit_transform(_WORKED_X_TRAIN)
     col1 = out[:, 1]
     assert abs(col1.mean()) < 1e-12
-    assert abs(col1.std()) - 1.0 < 1e-12
+    assert abs(col1.std() - 1.0) < 1e-12
 
     raw = signed_log1p(_WORKED_X_TRAIN[:, 1])
     mean = raw.mean()
@@ -51,17 +51,30 @@ def test_negative_values_signed() -> None:
 def test_transform_uses_training_statistics() -> None:
     scaler = SignedLogStandardScaler()
     scaler.fit(_WORKED_X_TRAIN)
+    mean_before = scaler.mean_.copy()
+    scale_before = scaler.scale_.copy()
     x_val = np.array([[0.0, 50.0, 5.0], [1.0, 200.0, 5.0]])
+    x_val_before = x_val.copy()
     out = scaler.transform(x_val)
 
-    cols = ~scaler.binary_mask_
-    manual = x_val.copy()
-    manual[:, cols] = (signed_log1p(x_val[:, cols]) - scaler.mean_) / scaler.scale_
-    np.testing.assert_allclose(out, manual, atol=1e-12)
+    # Statistics come from the training column only, computed by hand.
+    train_log = signed_log1p(_WORKED_X_TRAIN[:, 1])
+    expected_col1 = (signed_log1p(x_val[:, 1]) - train_log.mean()) / train_log.std()
+    np.testing.assert_allclose(out[:, 1], expected_col1, atol=1e-12)
+    np.testing.assert_array_equal(out[:, 0], x_val[:, 0])
 
-    x_before = x_val.copy()
-    scaler.transform(x_val)
-    np.testing.assert_array_equal(x_val, x_before)
+    # Transforming validation data neither refits nor modifies the input.
+    np.testing.assert_array_equal(scaler.mean_, mean_before)
+    np.testing.assert_array_equal(scaler.scale_, scale_before)
+    np.testing.assert_array_equal(x_val, x_val_before)
+
+
+def test_constant_training_column_stays_zero_for_new_values() -> None:
+    scaler = SignedLogStandardScaler()
+    scaler.fit(_WORKED_X_TRAIN)
+    x_val = np.array([[0.0, 50.0, 50.0], [1.0, 200.0, 0.0]])
+    out = scaler.transform(x_val)
+    np.testing.assert_array_equal(out[:, 2], np.zeros(2))
 
 
 def test_wrong_column_count_raises() -> None:

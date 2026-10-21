@@ -23,12 +23,18 @@ class SignedLogStandardScaler(BaseEstimator, TransformerMixin):
     """Signed log transform + standardization for non-binary columns.
 
     Columns whose training values are all 0 or 1 are passed through unchanged.
-    Constant non-binary columns get scale 1 (they become all zeros).
+    Constant non-binary columns get scale 1 and are always transformed to 0, also
+    when a later ``transform`` call sees a different value. (The standard deviation
+    of a constant column is not exactly 0 in floating point, e.g. 2.2e-16 for a
+    column of 5.0, so a ``std > 0`` test alone would blow the column up.)
 
     Attributes:
         binary_mask_: Boolean mask of passthrough (0/1) columns.
+        constant_mask_: Boolean mask, over the non-binary columns only, of those
+            that are constant after the signed log transform in training.
         mean_: Means of the transformed non-binary columns.
-        scale_: Standard deviations of the transformed non-binary columns (0 -> 1).
+        scale_: Standard deviations of the transformed non-binary columns
+            (1 for constant columns).
         n_features_in_: Number of input columns seen in fit.
     """
 
@@ -46,9 +52,8 @@ class SignedLogStandardScaler(BaseEstimator, TransformerMixin):
         self.binary_mask_ = np.all((values == 0.0) | (values == 1.0), axis=0)
         transformed = signed_log1p(values[:, ~self.binary_mask_])
         self.mean_ = transformed.mean(axis=0)
-        std = transformed.std(axis=0)
         self.constant_mask_ = np.ptp(transformed, axis=0) == 0.0
-        self.scale_ = np.where(self.constant_mask_, 1.0, np.where(std > 0.0, std, 1.0))
+        self.scale_ = np.where(self.constant_mask_, 1.0, transformed.std(axis=0))
         self.n_features_in_ = values.shape[1]
         return self
 
