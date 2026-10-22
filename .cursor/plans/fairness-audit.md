@@ -14,7 +14,7 @@ Phase commits are found with `git log --oneline --grep "fairness: phase <N>"`.
 
 | Phase | Title | Status (`todo` / `in progress` / `done`) | Review verdict | Notes |
 | ----- | ----- | ---------------------------------------- | -------------- | ----- |
-| 0 | Preconditions and baseline snapshot | done | | BASE `a9eac5a`; `git status` clean at start; pytest 154 passed (38 s); black/isort OK; scipy 1.18.0 matplotlib 3.11.0; models plan Phase 7 `done` PASS WITH NITS; inputs: 4× baseline OOF+metrics (+ feature_importance except mlp), 16× robustness OOF rank_2–5, `fairness_groups_train.parquet` 307507 rows, `data/application_train.csv` present. |
+| 0 | Preconditions and baseline snapshot | done | PASS WITH NITS (Claude Code, 2026-10-22: reviewer re-ran black/isort (OK), pytest (154 passed, 34 s), versions (scipy 1.18.0, matplotlib 3.11.0) and a spot-check script: BASE `a9eac5a` = parent of `2f2cdfe`; all 4 baseline OOF + `metrics.json` (+ `feature_importance.parquet` except mlp) and 16 robustness OOFs present, each 307,507 rows, schema `SK_ID_CURR, TARGET, y_pred_proba, fold`, no NaN, p ∈ [0, 1], identical ids/TARGET/fold across all 20 files; groups file 307,507 × 6 with the 6 listed columns, same id set as OOF, 17 groups, `GENDER_AGE` consistent; base rate 24,825 / 307,507, F 0.06999, M 0.10142, smallest cell M 60-69 7,607 / 486; base-rate threshold flags exactly 24,825 for every model (no ties at t); PTI 12 missing, quintile cut points 0.104 / 0.144 / 0.186 / 0.247; every watch-list group matches ≥ 2 features. Nits: Notes give counts, not the `ls` summary the exit criterion asks for; step 8's message `fairness: phase 0 - plan` is stale because the plan was already committed in BASE — the commit used the rule-7 form, fine. Plan defect for Phase 6 (not the executor's): P6.1 / 7.2 sanity "F-M oracle_dir ≈ 0.966" is M/F; with `oracle_a / oracle_b` (a = F) it is 1.035 → fix the plan text before Phase 6. All three fixed by the reviewer on 2026-10-22: `ls` summary added to Notes, step 8 reworded, oracle sanity values corrected in section 2, P6.1, P6 exit criteria and 7.2) | BASE `a9eac5a`; `git status` clean at start; pytest 154 passed (38 s); black/isort OK; scipy 1.18.0 matplotlib 3.11.0; models plan Phase 7 `done` PASS WITH NITS; inputs: 4× baseline OOF+metrics (+ feature_importance except mlp), 16× robustness OOF rank_2–5, `fairness_groups_train.parquet` 307507 rows, `data/application_train.csv` present. `ls` summary (`artifacts/runs/<m>/baseline/`): logreg `feature_importance.parquet metrics.json oof_predictions.parquet` + `robustness/rank_{2,3,4,5}/oof_predictions.parquet`; lgbm idem; mlp `metrics.json oof_predictions.parquet` + 4 robustness OOF; rf idem logreg; `artifacts/features/fairness_groups_train.parquet`; `data/application_train.csv`. |
 | 1 | Config, types and audit input loading | todo | | |
 | 2 | Statistics core | todo | | |
 | 3 | Threshold, group table and utility | todo | | |
@@ -73,7 +73,7 @@ Rows: "Rate orientation", "Decision threshold", "Fairness metric set", "Prioriti
 6. **p-values:** Hurlin et al.'s likelihood-ratio (G) test of independence everywhere, reported **after** gaps and intervals.
 7. **Calibration:** 10 equal-frequency bins (deciles) of each model's pooled OOF score; observed default rate vs mean score per bin and group with 95% error bars; G-test of sufficiency across the bins. Brier score and log loss per group next to it.
 8. **Conditional demographic parity:** PTI = `AMT_ANNUITY / AMT_INCOME_TOTAL` from the **raw** application CSV; quintiles by `pd.qcut(q=5)` on the 307,495 rows with known PTI (cut points ≈ 0.104 / 0.144 / 0.186 / 0.247); the 12 rows without PTI are excluded from this diagnostic only. Pairs F − M and 20-29 − 60-69; per-quintile gaps with intervals plus one stratified G-test per pair; cell × quintile approval rates as an appendix table.
-9. **Comparison with the data:** label-implied ("oracle") approval rates `1 − p_g` (men/women ≈ 0.97); Chouldechova's expected signs; Kendall's τ between the cells' base-rate ranking and FPR ranking; proxy watch list in the saved feature importances.
+9. **Comparison with the data:** label-implied ("oracle") approval rates `1 − p_g` (men/women ≈ 0.97, i.e. F/M ≈ 1.035 in the a − b orientation of pair `F-M`); Chouldechova's expected signs; Kendall's τ between the cells' base-rate ranking and FPR ranking; proxy watch list in the saved feature importances.
 10. **Robustness ranks 2–5:** F − M EOD, ΔFNR and ΔAR as point estimates with Wald intervals (no bootstrap).
 11. **Equalized-odds summary SP** = ½(|ΔFPR| + |ΔFNR|) is **not** computed here (it is only for the mitigation trade-off plots).
 12. **Reporting:** main text = primary gaps per model, gender results and one cell figure; full tables as artifacts.
@@ -449,7 +449,7 @@ Steps:
 5. For each model in `logreg lgbm mlp rf`: `artifacts/runs/<m>/baseline/oof_predictions.parquet`, `metrics.json`, `feature_importance.parquet` (not for `mlp`) and `robustness/rank_{2..5}/oof_predictions.parquet` exist.
 6. `artifacts/features/fairness_groups_train.parquet` exists with 307,507 rows and columns `SK_ID_CURR, CODE_GENDER, DAYS_BIRTH, AGE_YEARS, AGE_BAND, GENDER_AGE`; `data/application_train.csv` exists.
 7. `python -c "import scipy, matplotlib; print(scipy.__version__, matplotlib.__version__)"`.
-8. Commit the plan: `git add .cursor/plans/fairness-audit.md && git commit -m "fairness: phase 0 - plan"`.
+8. Commit the plan with the Progress-log update: `git add .cursor/plans/fairness-audit.md && git commit -m "fairness: phase 0 - preconditions and baseline snapshot"` (if the plan was already committed before BASE, this commit only carries the Progress-log update).
 
 **Exit criteria**
 
@@ -798,7 +798,7 @@ def proxy_importance(importance: Optional[pd.DataFrame], config: AuditConfig, mo
 - `model_diff`, `model_dir` and the DIR interval from `gaps` (`approval_rate` rows).
 - `direction`: let `dm = model_dir − 1`, `do = oracle_dir − 1`. `"reversed"` if `dm·do < 0`; else `"wider"` if `|dm| > |do|`; else `"narrower"` (`"equal"` if `|dm| == |do|`). These are mechanical labels; interpretation is Step 7.
 - `oracle_in_model_ci = model_dir_ci_low ≤ oracle_dir ≤ model_dir_ci_high`.
-- Real-data sanity: for `F-M`, `oracle_dir` = (1 − 0.10142)/(1 − 0.06999) ≈ 0.966.
+- Real-data sanity: for `F-M`, `oracle_dir` = (1 − 0.06999)/(1 − 0.10142) ≈ 1.035 (a = F over b = M; the men/women ratio is ≈ 0.966).
 
 **Expected signs** (Chouldechova 2017: with a calibrated score, the higher-base-rate group has higher FPR and lower FNR):
 - `expected_sign_eod = sign(base_rate_a − base_rate_b)`; `expected_sign_dfnr = −expected_sign_eod`.
@@ -835,7 +835,7 @@ No bootstrap here. Reuse `load_audit_frame`, `base_rate_threshold`, `pair_mask`,
 **Exit criteria**
 
 - [ ] Standard checks (3.1) pass.
-- [ ] Real-data spot check: lgbm → `oracle_benchmark` row `F-M` (oracle DIR ≈ 0.966) and `robustness_table` (5 ranks). Paste in Notes.
+- [ ] Real-data spot check: lgbm → `oracle_benchmark` row `F-M` (oracle DIR ≈ 1.035) and `robustness_table` (5 ranks). Paste in Notes.
 - [ ] Commit `fairness: phase 6 - data comparison and robustness`.
 
 ---
@@ -1118,7 +1118,7 @@ verdict into the plan's Progress log.
 - Conditional parity excludes exactly the NaN-PTI rows; unconditional gap taken from all rows; stratified df = 5 on real data.
 
 **Phase 6**
-- Oracle uses `1 − base_rate` of each side of the pair; real F − M oracle DIR ≈ 0.966.
+- Oracle uses `1 − base_rate` of each side of the pair; real F − M oracle DIR ≈ 1.035 (F/M; not the M/F value 0.966).
 - Expected signs follow base rates (higher base rate → higher FPR, lower FNR).
 - Proxy grouping uses first-match order; `coef` absolute values; ranks over all features.
 - Robustness recomputes the threshold per rank.
@@ -1130,7 +1130,7 @@ verdict into the plan's Progress log.
 
 **Phase 8**
 - Re-run the Phase 8 checks with a script.
-- Sanity of results: primary gaps per model with CIs; compare signs with Chouldechova's prediction (men and younger applicants expected higher FPR, lower FNR); compare the F − M DIR with the 0.966 oracle; spread of primary gaps across ranks 2–5 vs the rank-1 CI width; calibration p-values; any figure that looks wrong.
+- Sanity of results: primary gaps per model with CIs; compare signs with Chouldechova's prediction (men and younger applicants expected higher FPR, lower FNR); compare the F − M DIR with the 1.035 oracle (F/M); spread of primary gaps across ranks 2–5 vs the rank-1 CI width; calibration p-values; any figure that looks wrong.
 - Report a results summary for the thesis author (no interpretation beyond what the numbers show; flag surprises for Step 7).
 
 **Phase 9**
