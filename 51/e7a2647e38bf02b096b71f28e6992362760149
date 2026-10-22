@@ -1,0 +1,19 @@
+.cursor/plans/fairness-audit.md
+  s_58cade55700fed::t_c0848993f1182e 17,76,452,801,838,1121,1133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "51e7a2647e38bf02b096b71f28e6992362760149",
+  "prompts": {},
+  "sessions": {
+    "s_58cade55700fed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b2a5742a-73e9-46d8-a24c-f29310ab2559",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
