@@ -72,8 +72,11 @@ def diff_ci(
 
     Returns:
         ``(diff, ci_low, ci_high)`` with ``diff = r_a - r_b``; endpoints are
-        not clipped to ``[0, 1]``.
+        not clipped to ``[0, 1]``. ``(nan, nan, nan)`` if either size is 0.
     """
+    if n_a == 0 or n_b == 0:
+        nan = float("nan")
+        return (nan, nan, nan)
     d = r_a - r_b
     se = float(np.sqrt(r_a * (1.0 - r_a) / n_a + r_b * (1.0 - r_b) / n_b))
     return (d, d - z * se, d + z * se)
@@ -92,14 +95,15 @@ def ratio_ci(
         z: Normal quantile (two-sided).
 
     Returns:
-        ``(ratio, ci_low, ci_high)``; all NaN if either rate is 0.
+        ``(ratio, ci_low, ci_high)``; all NaN if either size or either rate is
+        0 (or a rate is NaN).
     """
-    if r_a == 0.0 or r_b == 0.0:
+    if n_a == 0 or n_b == 0 or not (r_a > 0.0 and r_b > 0.0):
         nan = float("nan")
         return (nan, nan, nan)
-    q = r_a / r_b
+    q = float(r_a / r_b)
     se_log = float(np.sqrt((1.0 - r_a) / (n_a * r_a) + (1.0 - r_b) / (n_b * r_b)))
-    return (q, q * np.exp(-z * se_log), q * np.exp(z * se_log))
+    return (q, float(q * np.exp(-z * se_log)), float(q * np.exp(z * se_log)))
 
 
 def _drop_zero_rows_cols(table: np.ndarray) -> np.ndarray:
@@ -177,14 +181,17 @@ def mean_ci(values: np.ndarray, z: float) -> Tuple[float, float, float]:
         z: Normal quantile (two-sided).
 
     Returns:
-        ``(mean, ci_low, ci_high)``; ``(nan, nan, nan)`` if ``n == 0``.
+        ``(mean, ci_low, ci_high)``; ``(nan, nan, nan)`` if ``n == 0`` and
+        ``(mean, nan, nan)`` if ``n == 1`` (no variance estimate).
     """
     arr = np.asarray(values, dtype=float)
     n = arr.size
+    nan = float("nan")
     if n == 0:
-        nan = float("nan")
         return (nan, nan, nan)
     m = float(arr.mean())
+    if n == 1:
+        return (m, nan, nan)
     se = float(arr.std(ddof=1) / np.sqrt(n))
     return (m, m - z * se, m + z * se)
 
@@ -209,8 +216,12 @@ def worst_group_summary(
         alpha: One minus interval coverage (e.g. 0.05 for 95%).
 
     Returns:
-        Dict with ``k_groups``, max−min gap and CI, variance summaries and
-        standard deviations (see the data-audit helper for key names).
+        Dict with ``k_groups``, ``max_min_gap``, ``max_min_ci_low``,
+        ``max_min_ci_high``, ``var_uncorrected``, ``var_single_corrected``,
+        ``var_double_corrected_ci_low``, ``var_double_corrected_ci_high`` and
+        the matching standard deviations ``sd_uncorrected``,
+        ``sd_single_corrected``, ``sd_double_corrected_ci_low`` and
+        ``sd_double_corrected_ci_high``.
     """
     n_arr = np.asarray(n, dtype=float)
     y = np.asarray(rate, dtype=float)
@@ -267,12 +278,16 @@ def bootstrap_auc_ci(
         alpha: One minus interval coverage.
 
     Returns:
-        ``(point_auc, ci_low, ci_high)``. Replicates with a single class are
-        skipped (stored as NaN in the bootstrap distribution).
+        ``(point_auc, ci_low, ci_high)``. ``(nan, nan, nan)`` if the group is
+        empty or has a single class (AUC undefined). Replicates with a single
+        class are skipped (stored as NaN in the bootstrap distribution).
     """
     y_arr = np.asarray(y)
     score_arr = np.asarray(score, dtype=float)
     n = y_arr.size
+    if n == 0 or y_arr.min() == y_arr.max():
+        nan = float("nan")
+        return (nan, nan, nan)
     point = float(roc_auc_score(y_arr, score_arr))
     rng = np.random.default_rng(seed)
     boot = np.empty(n_boot, dtype=float)
