@@ -1,16 +1,33 @@
 """Label-implied benchmark, expected signs, Kendall tau, and proxy importance."""
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from scipy.stats import kendalltau
 
 from src.fairness.gaps import pair_mask
-from src.fairness.types import GENDER_AGE_COL, Y_COL, YHAT_COL, AuditConfig
+from src.fairness.group_metrics import rate
+from src.fairness.types import (
+    APPROVAL_RATE_METRIC,
+    DIFF_CI_HIGH_COL,
+    DIFF_CI_LOW_COL,
+    DIFF_COL,
+    FNR_METRIC,
+    FPR_METRIC,
+    GENDER_AGE_COL,
+    METRIC_COL,
+    PAIR_ID_COL,
+    RATIO_CI_HIGH_COL,
+    RATIO_CI_LOW_COL,
+    RATIO_COL,
+    Y_COL,
+    YHAT_COL,
+    AuditConfig,
+)
 
-ORACLE_BENCHMARK_COLUMNS: tuple = (
+ORACLE_BENCHMARK_COLUMNS: Tuple[str, ...] = (
     "pair_id",
     "oracle_approval_a",
     "oracle_approval_b",
@@ -24,7 +41,7 @@ ORACLE_BENCHMARK_COLUMNS: tuple = (
     "oracle_in_model_ci",
 )
 
-EXPECTED_SIGNS_COLUMNS: tuple = (
+EXPECTED_SIGNS_COLUMNS: Tuple[str, ...] = (
     "pair_id",
     "base_rate_a",
     "base_rate_b",
@@ -38,7 +55,7 @@ EXPECTED_SIGNS_COLUMNS: tuple = (
     "dfnr_matches",
 )
 
-PROXY_IMPORTANCE_COLUMNS: tuple = (
+PROXY_IMPORTANCE_COLUMNS: Tuple[str, ...] = (
     "feature_group",
     "n_features",
     "importance_share",
@@ -47,8 +64,27 @@ PROXY_IMPORTANCE_COLUMNS: tuple = (
     "importance_type",
 )
 
+# Columns of the two tables that hold tri-state values (True / False / undefined).
+_BOOLEAN_COLUMNS: Tuple[str, ...] = (
+    "oracle_in_model_ci",
+    "eod_ci_excludes_0",
+    "eod_matches",
+    "dfnr_ci_excludes_0",
+    "dfnr_matches",
+)
+
+# Sign columns: -1 / 0 / 1, or ``<NA>`` when undefined.
+_SIGN_COLUMNS: Tuple[str, ...] = ("expected_sign_eod", "expected_sign_dfnr")
+
 OTHER_FEATURE_GROUP = "other"
-MLP_MODEL = "mlp"
+COEF_IMPORTANCE_TYPE = "coef"
+DIRECTION_REVERSED = "reversed"
+DIRECTION_WIDER = "wider"
+DIRECTION_NARROWER = "narrower"
+DIRECTION_EQUAL = "equal"
+# |model_dir - 1| and |oracle_dir - 1| closer than this are labelled "equal".
+DIRECTION_RTOL = 1e-9
+DIRECTION_ATOL = 1e-12
 
 
 def _base_rate_side(frame: pd.DataFrame, side: Dict[str, str]) -> float:
@@ -59,18 +95,50 @@ def _base_rate_side(frame: pd.DataFrame, side: Dict[str, str]) -> float:
     return float(y.mean())
 
 
-def _direction_label(model_dir: float, oracle_dir: float) -> str:
+def _direction_label(model_dir: float, oracle_dir: float) -> Optional[str]:
+    """Mechanical label of the model DIR relative to the oracle DIR (None if NaN)."""
     if np.isnan(model_dir) or np.isnan(oracle_dir):
-        return "equal"
+        return None
     dm = model_dir - 1.0
     do = oracle_dir - 1.0
     if dm * do < 0:
-        return "reversed"
-    if abs(dm) > abs(do):
-        return "wider"
-    if np.isclose(abs(dm), abs(do)):
-        return "equal"
-    return "narrower"
+        return DIRECTION_REVERSED
+    if np.isclose(abs(dm), abs(do), rtol=DIRECTION_RTOL, atol=DIRECTION_ATOL):
+        return DIRECTION_EQUAL
+    return DIRECTION_WIDER if abs(dm) > abs(do) else DIRECTION_NARROWER
+
+
+def _ci_excludes_zero(ci_low: float, ci_high: float) -> Any:
+    """True / False, or ``pd.NA`` when an interval end is NaN."""
+    if np.isnan(ci_low) or np.isnan(ci_high):
+        return pd.NA
+    return bool(ci_low > 0.0 or ci_high < 0.0)
+
+
+def _sign(value: float) -> float:
+    """Sign of ``value`` as -1 / 0 / 1, or NaN when ``value`` is NaN."""
+    if np.isnan(value):
+        return float("nan")
+    return float(np.sign(value))
+
+
+def _sign_matches(observed: float, expected: float) -> Any:
+    """True / False, or ``pd.NA`` when the observed or expected sign is NaN."""
+    if np.isnan(observed) or np.isnan(expected):
+        return pd.NA
+    return bool(np.sign(observed) == expected)
+
+
+def _as_frame(rows: List[Dict[str, Any]], columns: Tuple[str, ...]) -> pd.DataFrame:
+    """Build the table; tri-state columns get nullable boolean / integer dtypes."""
+    table = pd.DataFrame(rows, columns=list(columns))
+    for col in _SIGN_COLUMNS:
+        if col in table.columns:
+            table[col] = table[col].astype("Int64")
+    for col in _BOOLEAN_COLUMNS:
+        if col in table.columns:
+            table[col] = table[col].astype("boolean")
+    return table
 
 
 def oracle_benchmark(
@@ -84,9 +152,10 @@ def oracle_benchmark(
         gaps: Output of ``pair_gaps`` (uses ``approval_rate`` rows).
 
     Returns:
-        DataFrame with ``ORACLE_BENCHMARK_COLUMNS``.
+        DataFrame with ``ORACLE_BENCHMARK_COLUMNS``. ``direction`` is ``None`` and
+        ``oracle_in_model_ci`` is ``<NA>`` when a rate or interval is undefined.
     """
-    approval = gaps[gaps["metric"] == "approval_rate"].set_index("pair_id")
+    approval = gaps[gaps[METRIC_COL] == APPROVAL_RATE_METRIC].set_index(PAIR_ID_COL)
     rows: List[Dict[str, Any]] = []
 
     for pair in config.pairs:
@@ -103,10 +172,10 @@ def oracle_benchmark(
 
         if pair.pair_id in approval.index:
             gap_row = approval.loc[pair.pair_id]
-            model_diff = float(gap_row["diff"])
-            model_dir = float(gap_row["ratio"])
-            model_dir_ci_low = float(gap_row["ratio_ci_low"])
-            model_dir_ci_high = float(gap_row["ratio_ci_high"])
+            model_diff = float(gap_row[DIFF_COL])
+            model_dir = float(gap_row[RATIO_COL])
+            model_dir_ci_low = float(gap_row[RATIO_CI_LOW_COL])
+            model_dir_ci_high = float(gap_row[RATIO_CI_HIGH_COL])
         else:
             model_diff = model_dir = model_dir_ci_low = model_dir_ci_high = float("nan")
 
@@ -115,7 +184,7 @@ def oracle_benchmark(
             or np.isnan(model_dir_ci_high)
             or np.isnan(oracle_dir)
         ):
-            oracle_in_ci = False
+            oracle_in_ci: Any = pd.NA
         else:
             oracle_in_ci = bool(model_dir_ci_low <= oracle_dir <= model_dir_ci_high)
 
@@ -135,13 +204,17 @@ def oracle_benchmark(
             }
         )
 
-    return pd.DataFrame(rows, columns=list(ORACLE_BENCHMARK_COLUMNS))
+    return _as_frame(rows, ORACLE_BENCHMARK_COLUMNS)
 
 
-def _ci_excludes_zero(ci_low: float, ci_high: float) -> bool:
-    if np.isnan(ci_low) or np.isnan(ci_high):
-        return False
-    return bool(ci_low > 0.0 or ci_high < 0.0)
+def _observed_gap(gaps_by_pair: pd.DataFrame, pair_id: str) -> Tuple[float, Any]:
+    """Return ``(diff, ci_excludes_zero)`` of a pair, NaN / ``pd.NA`` if absent."""
+    if pair_id not in gaps_by_pair.index:
+        return float("nan"), pd.NA
+    row = gaps_by_pair.loc[pair_id]
+    return float(row[DIFF_COL]), _ci_excludes_zero(
+        float(row[DIFF_CI_LOW_COL]), float(row[DIFF_CI_HIGH_COL])
+    )
 
 
 def expected_signs(
@@ -155,37 +228,20 @@ def expected_signs(
         gaps: Output of ``pair_gaps``.
 
     Returns:
-        DataFrame with ``EXPECTED_SIGNS_COLUMNS``.
+        DataFrame with ``EXPECTED_SIGNS_COLUMNS``. Signs and booleans are NaN /
+        ``<NA>`` when a pair side has no rows or an interval is undefined.
     """
-    fpr_gaps = gaps[gaps["metric"] == "fpr"].set_index("pair_id")
-    fnr_gaps = gaps[gaps["metric"] == "fnr"].set_index("pair_id")
+    fpr_gaps = gaps[gaps[METRIC_COL] == FPR_METRIC].set_index(PAIR_ID_COL)
+    fnr_gaps = gaps[gaps[METRIC_COL] == FNR_METRIC].set_index(PAIR_ID_COL)
     rows: List[Dict[str, Any]] = []
 
     for pair in config.pairs:
         br_a = _base_rate_side(frame, pair.a)
         br_b = _base_rate_side(frame, pair.b)
-        expected_eod = int(np.sign(br_a - br_b))
-        expected_dfnr = int(-expected_eod)
-
-        if pair.pair_id in fpr_gaps.index:
-            eod_row = fpr_gaps.loc[pair.pair_id]
-            observed_eod = float(eod_row["diff"])
-            eod_excludes = _ci_excludes_zero(
-                float(eod_row["diff_ci_low"]), float(eod_row["diff_ci_high"])
-            )
-        else:
-            observed_eod = float("nan")
-            eod_excludes = False
-
-        if pair.pair_id in fnr_gaps.index:
-            dfnr_row = fnr_gaps.loc[pair.pair_id]
-            observed_dfnr = float(dfnr_row["diff"])
-            dfnr_excludes = _ci_excludes_zero(
-                float(dfnr_row["diff_ci_low"]), float(dfnr_row["diff_ci_high"])
-            )
-        else:
-            observed_dfnr = float("nan")
-            dfnr_excludes = False
+        expected_eod = _sign(br_a - br_b)
+        expected_dfnr = -expected_eod
+        observed_eod, eod_excludes = _observed_gap(fpr_gaps, pair.pair_id)
+        observed_dfnr, dfnr_excludes = _observed_gap(fnr_gaps, pair.pair_id)
 
         rows.append(
             {
@@ -195,15 +251,15 @@ def expected_signs(
                 "expected_sign_eod": expected_eod,
                 "observed_eod": observed_eod,
                 "eod_ci_excludes_0": eod_excludes,
-                "eod_matches": bool(np.sign(observed_eod) == expected_eod),
+                "eod_matches": _sign_matches(observed_eod, expected_eod),
                 "expected_sign_dfnr": expected_dfnr,
                 "observed_dfnr": observed_dfnr,
                 "dfnr_ci_excludes_0": dfnr_excludes,
-                "dfnr_matches": bool(np.sign(observed_dfnr) == expected_dfnr),
+                "dfnr_matches": _sign_matches(observed_dfnr, expected_dfnr),
             }
         )
 
-    return pd.DataFrame(rows, columns=list(EXPECTED_SIGNS_COLUMNS))
+    return _as_frame(rows, EXPECTED_SIGNS_COLUMNS)
 
 
 def kendall_cells(frame: pd.DataFrame, config: AuditConfig) -> Dict[str, Any]:
@@ -214,10 +270,9 @@ def kendall_cells(frame: pd.DataFrame, config: AuditConfig) -> Dict[str, Any]:
         config: Audit settings (cell label order in ``groupings``).
 
     Returns:
-        Dict with ``tau``, ``p_value``, ``n_cells``, and ``cells`` (per-cell rates).
+        Dict with ``tau``, ``p_value``, ``n_cells`` (cells with a defined base rate
+        and FPR, i.e. the cells used) and ``cells`` (per-cell rates, all labels).
     """
-    from src.fairness.group_metrics import rate
-
     y = frame[Y_COL].to_numpy()
     yhat = frame[YHAT_COL].to_numpy()
     cell_labels = config.groupings[GENDER_AGE_COL]
@@ -233,7 +288,7 @@ def kendall_cells(frame: pd.DataFrame, config: AuditConfig) -> Dict[str, Any]:
         h_g = yhat[mask]
         n = int(y_g.size)
         base_rate = float(y_g.mean()) if n else float("nan")
-        events, den = rate(y_g, h_g, "fpr")
+        events, den = rate(y_g, h_g, FPR_METRIC)
         fpr = float(events / den) if den else float("nan")
         base_rates.append(base_rate)
         fprs.append(fpr)
@@ -252,7 +307,7 @@ def kendall_cells(frame: pd.DataFrame, config: AuditConfig) -> Dict[str, Any]:
     return {
         "tau": tau,
         "p_value": p_value,
-        "n_cells": len(cell_labels),
+        "n_cells": int(valid.sum()),
         "cells": cells,
     }
 
@@ -278,21 +333,20 @@ def proxy_importance(
         model: Registry model name.
 
     Returns:
-        Summary table with ``PROXY_IMPORTANCE_COLUMNS``, or ``None`` for ``mlp``.
+        Summary table with ``PROXY_IMPORTANCE_COLUMNS``, or ``None`` when there is
+        no importance table or the model has no ``importance_type`` entry (``mlp``).
     """
-    if model == MLP_MODEL:
-        return None
-    if importance is None:
+    if importance is None or model not in config.importance_type:
         return None
 
     imp_type = config.importance_type[model]
     subset = importance[importance["importance_type"] == imp_type].copy()
-    if imp_type == "coef":
+    if imp_type == COEF_IMPORTANCE_TYPE:
         subset["importance"] = subset["importance"].abs()
     avg = (
         subset.groupby("feature", as_index=False)["importance"]
         .mean()
-        .sort_values("importance", ascending=False)
+        .sort_values(["importance", "feature"], ascending=[False, True])
         .reset_index(drop=True)
     )
     avg["feature_group"] = avg["feature"].map(

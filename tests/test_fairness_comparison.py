@@ -2,10 +2,12 @@
 
 from dataclasses import replace
 from pathlib import Path
+from typing import Callable, Dict, Tuple
 
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.metrics import roc_auc_score
 
 from src.fairness.comparison import (
     expected_signs,
@@ -67,16 +69,56 @@ def _approval_gap_row(model_dir: float) -> pd.DataFrame:
 
 def test_direction_labels() -> None:
     config = _one_pair_config()
-    # oracle_dir = 0.8/0.6 = 4/3 with br F=0.2, M=0.4 → do = 1/3
+    # oracle_dir = 0.8/0.6 ≈ 4/3 with br F=0.2, M=0.4 → do = 1/3
     frame = _frame_fm_base_rates(0.2, 0.4)
+    eps = 1e-15
     cases = [
         (1.5, "wider"),
+        (1.2, "narrower"),
+        (1.0, "narrower"),
         (0.5, "reversed"),
         (4 / 3, "equal"),
+        (4 / 3 + eps, "equal"),
+        (4 / 3 - eps, "equal"),
     ]
     for model_dir, label in cases:
         oracle = oracle_benchmark(frame, config, _approval_gap_row(model_dir))
-        assert oracle.iloc[0]["direction"] == label
+        assert oracle.iloc[0]["direction"] == label, model_dir
+
+
+def _one_sided_frame() -> pd.DataFrame:
+    """Frame with F rows only: the M side of every F-M pair is empty."""
+    return pd.DataFrame(
+        {
+            "y": np.array([1, 0, 0, 0, 1, 0], dtype=np.int8),
+            "yhat": np.array([1, 0, 1, 0, 0, 0], dtype=np.int8),
+            "CODE_GENDER": ["F"] * 6,
+            "AGE_BAND": ["20-29"] * 6,
+            "GENDER_AGE": ["F | 20-29"] * 6,
+        }
+    )
+
+
+def test_empty_pair_side_gives_nan_not_error() -> None:
+    config = _one_pair_config()
+    frame = _one_sided_frame()
+    gaps = pair_gaps(frame, config)
+
+    oracle = oracle_benchmark(frame, config, gaps).iloc[0]
+    assert np.isnan(oracle["oracle_dir"])
+    assert oracle["direction"] is None
+    assert pd.isna(oracle["oracle_in_model_ci"])
+
+    signs = expected_signs(frame, config, gaps).iloc[0]
+    assert np.isnan(signs["observed_eod"])
+    for col in (
+        "expected_sign_eod",
+        "expected_sign_dfnr",
+        "eod_matches",
+        "dfnr_matches",
+        "eod_ci_excludes_0",
+    ):
+        assert pd.isna(signs[col])
 
 
 def test_expected_signs_toy(toy_audit_frame: pd.DataFrame) -> None:
@@ -94,8 +136,7 @@ def test_expected_signs_toy(toy_audit_frame: pd.DataFrame) -> None:
     assert row["dfnr_matches"]
 
 
-def test_kendall_perfect() -> None:
-    config = load_audit_config(default_fairness_config_path())
+def _kendall_frame(config: AuditConfig) -> pd.DataFrame:
     rows = []
     n_neg = 80
     for i, label in enumerate(config.groupings[GENDER_AGE_COL]):
@@ -120,8 +161,24 @@ def test_kendall_perfect() -> None:
                 "yhat": yhat,
             }
         )
-    frame = pd.DataFrame({k: np.concatenate([r[k] for r in rows]) for k in rows[0]})
+    return pd.DataFrame({k: np.concatenate([r[k] for r in rows]) for k in rows[0]})
+
+
+def test_kendall_perfect() -> None:
+    config = load_audit_config(default_fairness_config_path())
+    result = kendall_cells(_kendall_frame(config), config)
+    assert result["tau"] == pytest.approx(1.0, rel=0, abs=1e-12)
+    assert result["n_cells"] == 10
+    assert len(result["cells"]) == 10
+
+
+def test_kendall_counts_cells_used() -> None:
+    config = load_audit_config(default_fairness_config_path())
+    frame = _kendall_frame(config)
+    frame = frame[frame[GENDER_AGE_COL] != config.groupings[GENDER_AGE_COL][0]]
     result = kendall_cells(frame, config)
+    assert result["n_cells"] == 9
+    assert len(result["cells"]) == 10
     assert result["tau"] == pytest.approx(1.0, rel=0, abs=1e-12)
 
 
@@ -146,42 +203,63 @@ def test_proxy_importance() -> None:
     ext = out[out["feature_group"] == "ext_source_1"].iloc[0]
     assert ext["n_features"] == 2
     assert ext["best_feature"] == "num__EXT_SOURCE_1"
+    assert ext["best_feature_rank"] == 1
+    assert ext["importance_share"] == pytest.approx(4.0 / 6.5, rel=0, abs=1e-12)
+    protected = out[out["feature_group"] == "protected"].iloc[0]
+    assert protected["best_feature_rank"] == 2
+    other = out[out["feature_group"] == "other"].iloc[0]
+    assert other["best_feature"] == "num__X"
+    assert other["best_feature_rank"] == 4
     assert out["importance_share"].sum() == pytest.approx(1.0, rel=0, abs=1e-12)
     assert proxy_importance(importance, config, "mlp") is None
+    assert proxy_importance(importance, config, "not_a_model") is None
+    assert proxy_importance(None, config, "logreg") is None
 
 
-def test_robustness_table(tmp_path: Path, make_audit_frame) -> None:
+def test_proxy_importance_ties_are_deterministic() -> None:
     config = load_audit_config(default_fairness_config_path())
-    frame = make_audit_frame(n=500, seed=1)
-    ids = frame["SK_ID_CURR"].to_numpy()
-    y = frame["y"].to_numpy()
-    fold = frame["fold"].to_numpy()
+    importance = pd.DataFrame(
+        {
+            "feature": ["num__B", "num__A", "num__C"],
+            "fold": [0, 0, 0],
+            "importance_type": ["gain"] * 3,
+            "importance": [0.0, 0.0, 0.0],
+        }
+    )
+    out = proxy_importance(importance, config, "lgbm")
+    assert out is not None
+    assert out.iloc[0]["best_feature"] == "num__A"
+    assert out.iloc[0]["best_feature_rank"] == 1
 
+
+def _write_robustness_inputs(
+    tmp_path: Path, frame: pd.DataFrame, rank_scores: Dict[int, np.ndarray]
+) -> Tuple[Path, Path, Path]:
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     data_dir = tmp_path / "data"
     data_dir.mkdir()
     groups_path = tmp_path / "groups.parquet"
 
-    groups = frame[["SK_ID_CURR", "CODE_GENDER", "AGE_BAND", "GENDER_AGE"]].copy()
-    groups.to_parquet(groups_path, index=False)
-    app = pd.DataFrame(
+    ids = frame["SK_ID_CURR"].to_numpy()
+    frame[["SK_ID_CURR", "CODE_GENDER", "AGE_BAND", "GENDER_AGE"]].to_parquet(
+        groups_path, index=False
+    )
+    pd.DataFrame(
         {
             "SK_ID_CURR": ids,
             "AMT_ANNUITY": np.linspace(5000, 50000, len(ids)),
             "AMT_INCOME_TOTAL": np.full(len(ids), 100000.0),
         }
-    )
-    app.to_csv(data_dir / "application_train.csv", index=False)
+    ).to_csv(data_dir / "application_train.csv", index=False)
 
-    for rank in range(1, 6):
-        score = np.clip(frame["score"].to_numpy() + 0.02 * (rank - 1), 1e-6, 1 - 1e-6)
+    for rank, score in rank_scores.items():
         oof = pd.DataFrame(
             {
                 "SK_ID_CURR": ids,
-                "TARGET": y,
+                "TARGET": frame["y"].to_numpy(),
                 "y_pred_proba": score,
-                "fold": fold,
+                "fold": frame["fold"].to_numpy(),
             }
         )
         if rank == 1:
@@ -191,27 +269,46 @@ def test_robustness_table(tmp_path: Path, make_audit_frame) -> None:
             rank_dir.mkdir(parents=True)
             path = rank_dir / "oof_predictions.parquet"
         oof.to_parquet(path, index=False)
+    return run_dir, groups_path, data_dir
 
+
+def test_robustness_table(
+    tmp_path: Path, make_audit_frame: Callable[..., pd.DataFrame]
+) -> None:
+    config = load_audit_config(default_fairness_config_path())
+    frame = make_audit_frame(n=500, seed=1)
+    base_score = frame["score"].to_numpy()
+
+    # Each rank gets its own score noise, so thresholds and decisions differ by rank.
+    rank_scores: Dict[int, np.ndarray] = {}
+    for rank in range(1, 6):
+        noise = np.random.default_rng(rank).normal(0, 0.05 * (rank - 1), len(frame))
+        rank_scores[rank] = np.clip(base_score + noise, 1e-6, 1 - 1e-6)
+
+    run_dir, groups_path, data_dir = _write_robustness_inputs(
+        tmp_path, frame, rank_scores
+    )
     table = robustness_table(run_dir, config, groups_path, data_dir)
     assert len(table) == 5 * len(config.robustness_metrics)
     assert set(table["rank"]) == {1, 2, 3, 4, 5}
+    assert table["threshold"].nunique() == 5
 
-    rank1_frame = frame.copy()
-    thr = base_rate_threshold(
-        rank1_frame["score"].to_numpy(), rank1_frame["y"].to_numpy()
-    )
-    rank1_frame[YHAT_COL] = apply_threshold(
-        rank1_frame["score"].to_numpy(), thr.threshold
-    )
-    gaps = pair_gaps(rank1_frame, config)
-    primary = gaps[gaps["pair_id"] == config.primary_pair]
-    for metric in config.robustness_metrics:
-        gap_row = primary[primary["metric"] == metric].iloc[0]
-        rob_row = table[(table["rank"] == 1) & (table["metric"] == metric)].iloc[0]
-        assert rob_row["diff"] == pytest.approx(gap_row["diff"], rel=0, abs=1e-12)
-        assert rob_row["diff_ci_low"] == pytest.approx(
-            gap_row["diff_ci_low"], rel=0, abs=1e-12
+    y = frame["y"].to_numpy()
+    for rank, score in rank_scores.items():
+        thr = base_rate_threshold(score, y)
+        rank_frame = frame.copy()
+        rank_frame["score"] = score
+        rank_frame[YHAT_COL] = apply_threshold(score, thr.threshold)
+        gaps = pair_gaps(rank_frame, config)
+        primary = gaps[gaps["pair_id"] == config.primary_pair]
+        rank_rows = table[table["rank"] == rank]
+        assert (rank_rows["threshold"] == thr.threshold).all()
+        assert (rank_rows["n_flagged"] == thr.n_flagged).all()
+        assert rank_rows["roc_auc"].iloc[0] == pytest.approx(
+            roc_auc_score(y, score), rel=0, abs=1e-12
         )
-        assert rob_row["diff_ci_high"] == pytest.approx(
-            gap_row["diff_ci_high"], rel=0, abs=1e-12
-        )
+        for metric in config.robustness_metrics:
+            gap_row = primary[primary["metric"] == metric].iloc[0]
+            rob_row = rank_rows[rank_rows["metric"] == metric].iloc[0]
+            for col in ("diff", "diff_ci_low", "diff_ci_high"):
+                assert rob_row[col] == pytest.approx(gap_row[col], rel=0, abs=1e-12)

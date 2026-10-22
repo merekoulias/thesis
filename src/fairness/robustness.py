@@ -1,22 +1,18 @@
 """Primary-pair gaps across baseline rank 1 and robustness ranks 2–5."""
 
-from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Tuple
 
-import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
-from src.fairness.gaps import pair_gaps, pair_mask
+from src.fairness.gaps import pair_mask
 from src.fairness.group_metrics import rate
-from src.fairness.io import load_audit_frame
+from src.fairness.io import PathLike, load_audit_frame
 from src.fairness.stats import diff_ci
 from src.fairness.thresholds import apply_threshold, base_rate_threshold
 from src.fairness.types import SCORE_COL, Y_COL, YHAT_COL, AuditConfig
 
-PathLike = Union[str, Path]
-
-ROBUSTNESS_COLUMNS: tuple = (
+ROBUSTNESS_COLUMNS: Tuple[str, ...] = (
     "rank",
     "threshold",
     "n_flagged",
@@ -30,8 +26,8 @@ ROBUSTNESS_COLUMNS: tuple = (
 
 def _primary_pair_gaps(
     frame: pd.DataFrame, config: AuditConfig
-) -> Dict[str, Dict[str, float]]:
-    """Return diff and Wald CI per robustness metric for the primary pair."""
+) -> Dict[str, Tuple[float, float, float]]:
+    """Return ``(diff, ci_low, ci_high)`` per robustness metric for the primary pair."""
     pair = next(p for p in config.pairs if p.pair_id == config.primary_pair)
     y = frame[Y_COL].to_numpy()
     yhat = frame[YHAT_COL].to_numpy()
@@ -39,20 +35,14 @@ def _primary_pair_gaps(
     mask_b = pair_mask(frame, pair.b)
     y_a, h_a = y[mask_a], yhat[mask_a]
     y_b, h_b = y[mask_b], yhat[mask_b]
-    z = config.z
-    out: Dict[str, Dict[str, float]] = {}
+    out: Dict[str, Tuple[float, float, float]] = {}
 
     for metric in config.robustness_metrics:
         events_a, den_a = rate(y_a, h_a, metric)
         events_b, den_b = rate(y_b, h_b, metric)
         rate_a = float(events_a / den_a) if den_a else float("nan")
         rate_b = float(events_b / den_b) if den_b else float("nan")
-        diff, diff_lo, diff_hi = diff_ci(rate_a, den_a, rate_b, den_b, z)
-        out[metric] = {
-            "diff": diff,
-            "diff_ci_low": diff_lo,
-            "diff_ci_high": diff_hi,
-        }
+        out[metric] = diff_ci(rate_a, den_a, rate_b, den_b, config.z)
     return out
 
 
@@ -81,34 +71,15 @@ def robustness_table(
 
     for rank in ranks:
         frame = load_audit_frame(run_dir, rank, groups_path, data_dir, config)
-        thr = base_rate_threshold(frame[SCORE_COL].to_numpy(), frame[Y_COL].to_numpy())
-        frame = frame.copy()
-        frame[YHAT_COL] = apply_threshold(frame[SCORE_COL].to_numpy(), thr.threshold)
-        roc_auc = float(roc_auc_score(frame[Y_COL], frame[SCORE_COL]))
-
-        if rank == 1:
-            gaps = pair_gaps(frame, config)
-            primary = gaps[
-                (gaps["pair_id"] == config.primary_pair)
-                & (gaps["metric"].isin(config.robustness_metrics))
-            ]
-            gap_by_metric = {row["metric"]: row for _, row in primary.iterrows()}
-        else:
-            gap_by_metric = None
-
+        score = frame[SCORE_COL].to_numpy()
+        y = frame[Y_COL].to_numpy()
+        thr = base_rate_threshold(score, y)
+        frame[YHAT_COL] = apply_threshold(score, thr.threshold)
+        roc_auc = float(roc_auc_score(y, score))
         metric_gaps = _primary_pair_gaps(frame, config)
 
         for metric in config.robustness_metrics:
-            if gap_by_metric is not None:
-                gap_row = gap_by_metric[metric]
-                diff = float(gap_row["diff"])
-                diff_lo = float(gap_row["diff_ci_low"])
-                diff_hi = float(gap_row["diff_ci_high"])
-            else:
-                diff = metric_gaps[metric]["diff"]
-                diff_lo = metric_gaps[metric]["diff_ci_low"]
-                diff_hi = metric_gaps[metric]["diff_ci_high"]
-
+            diff, diff_lo, diff_hi = metric_gaps[metric]
             rows.append(
                 {
                     "rank": rank,

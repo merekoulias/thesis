@@ -30,6 +30,19 @@ PTI_COL = "PTI"
 PTI_Q_COL = "PTI_Q"
 YHAT_COL = "yhat"
 
+# Columns of ``gaps.csv`` and metric names read by the comparison modules.
+PAIR_ID_COL = "pair_id"
+METRIC_COL = "metric"
+DIFF_COL = "diff"
+DIFF_CI_LOW_COL = "diff_ci_low"
+DIFF_CI_HIGH_COL = "diff_ci_high"
+RATIO_COL = "ratio"
+RATIO_CI_LOW_COL = "ratio_ci_low"
+RATIO_CI_HIGH_COL = "ratio_ci_high"
+APPROVAL_RATE_METRIC = "approval_rate"
+FPR_METRIC = "fpr"
+FNR_METRIC = "fnr"
+
 OOF_COLUMNS: List[str] = ["SK_ID_CURR", "TARGET", "y_pred_proba", "fold"]
 
 
