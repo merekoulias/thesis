@@ -70,8 +70,6 @@ thesis/
 │   └── fairness/                  # metrics + mitigation (thesis core; add when ready)
 ├── configs/                       # paths, model params, protected-attr names
 ├── tests/                         # light tests on joins / shapes / model contracts
-├── fe.py                          # Legacy feature engineering + credit scoring model script
-├── feature_importance.py          # Legacy experimental importance utilities
 └── docs/                          # Project documentation
 ```
 

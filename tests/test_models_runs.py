@@ -63,7 +63,7 @@ def _tiny_run_config(n_samples: int, n_features: int) -> dict:
 
 
 def _write_feature_artifacts(data, out_dir: Path) -> None:
-    """Write minimal feature artifacts (same contract as test_models_pipeline)."""
+    """Write minimal feature artifacts (same contract as test_models_training)."""
     out_dir.mkdir(parents=True, exist_ok=True)
     data.X.to_parquet(out_dir / "X_train.parquet", index=False)
     data.y.to_frame(TARGET_COL).to_parquet(out_dir / "y_train.parquet", index=False)

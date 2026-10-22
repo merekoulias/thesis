@@ -2,4 +2,4 @@
 data_dir: data
 artifacts_dir: artifacts
 features_dir: artifacts/features
-models_dir: artifacts/models
+runs_dir: artifacts/runs

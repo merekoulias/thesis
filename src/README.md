@@ -30,8 +30,6 @@ src/
 - All repo text in English unless explicitly told otherwise.
 - Prefer small, importable modules over notebook-style scripts.
 - Configuration (paths, seeds, fold count, feature lists) belongs in `[configs/](../configs/)`, not hard-coded throughout packages.
-- Legacy Featuretools / importance scripts at repo root (`fe.py`, `feature_importance.py`) are reference only — new work goes here under `src/`.
-
 
 
 ## Status
@@ -40,7 +38,7 @@ src/
 - `src/models/` implements LightGBM stratified CV with OOF predictions and ROC AUC.
 - `src/fairness/` remains TODO.
 - Run features: `python -m src.features.pipeline --data-dir data --artifacts-dir artifacts/features`
-- Run model: `python -m src.models.pipeline --features-dir artifacts/features --models-dir artifacts/models`
+- Run model: `python -m src.models.run --model <name> --features-dir artifacts/features --runs-dir artifacts/runs`
 - Run tests: `pytest tests/`
 
 See [docs/thesis-overview.md](../docs/thesis-overview.md) and [docs/experiments.md](../docs/experiments.md).

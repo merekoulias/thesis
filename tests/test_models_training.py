@@ -1,4 +1,4 @@
-"""Tests for LightGBM credit-scoring pipeline."""
+"""Tests for the legacy train_lgbm_cv and the training-data contract."""
 
 from pathlib import Path
 
@@ -8,7 +8,6 @@ import pytest
 
 from src.constants import PROTECTED_ATTRIBUTES, SK_ID_CURR, TARGET_COL
 from src.models.io import load_training_data
-from src.models.pipeline import save_model_artifacts, train_credit_scorer
 from src.models.training import train_lgbm_cv
 from src.models.types import OOF_FOLD_COL, OOF_PROBA_COL, TrainingData
 
@@ -136,43 +135,3 @@ def test_load_training_data_duplicate_ids(tmp_path: Path) -> None:
     _write_feature_artifacts(data, tmp_path)
     with pytest.raises(ValueError, match="duplicate"):
         load_training_data(tmp_path)
-
-
-def test_save_model_artifacts_round_trip(
-    fast_model_config: dict, tmp_path: Path
-) -> None:
-    data = _make_synthetic_training_data(n_samples=120)
-    cv_result = train_lgbm_cv(data, fast_model_config, return_models=True)
-    from src.models.types import ModelArtifacts
-
-    artifacts = ModelArtifacts(cv_result=cv_result, training_data=data)
-    out = save_model_artifacts(artifacts, tmp_path / "models")
-
-    assert (out / "oof_predictions.parquet").exists()
-    assert (out / "metrics.json").exists()
-    assert (out / "roc_curve.json").exists()
-    assert (out / "roc_curve.png").exists()
-    assert (out / "fold_models" / "fold_0.txt").exists()
-    assert (out / "feature_importance_gain.parquet").exists()
-    assert (out / "feature_importance_split.parquet").exists()
-    assert (out / "fold_details.json").exists()
-
-    oof = pd.read_parquet(out / "oof_predictions.parquet")
-    assert len(oof) == len(data.X)
-
-
-def test_train_credit_scorer_from_artifacts(
-    fast_model_config: dict, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """End-to-end via feature dir with patched config for speed."""
-    data = _make_synthetic_training_data(n_samples=120)
-    feat_dir = tmp_path / "features"
-    _write_feature_artifacts(data, feat_dir)
-
-    artifacts = train_credit_scorer(
-        features_dir=feat_dir,
-        config=fast_model_config,
-    )
-    out = save_model_artifacts(artifacts, tmp_path / "models")
-    assert artifacts.cv_result.oof_roc_auc > 0.5
-    assert (out / "metrics.json").exists()

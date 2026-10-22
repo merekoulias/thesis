@@ -47,14 +47,6 @@ class CVResult:
     config: Dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass
-class ModelArtifacts:
-    """In-memory model training outputs."""
-
-    cv_result: CVResult
-    training_data: TrainingData
-
-
 # OOF prediction column names
 OOF_PROBA_COL = "y_pred_proba"
 OOF_FOLD_COL = "fold"
