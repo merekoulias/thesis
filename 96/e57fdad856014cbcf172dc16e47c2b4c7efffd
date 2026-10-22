@@ -1,0 +1,25 @@
+.cursor/plans/fairness-audit.md
+  s_d9c5268c22f553::t_a9b913b45107aa 21,890
+src/fairness/gaps.py
+  s_d9c5268c22f553::t_3bae7151ce009c 10-26,133,172-175,189-190,207,217-221,232
+src/fairness/types.py
+  s_d9c5268c22f553::t_02dbb59ae3e8fa 25
+tests/test_fairness_gaps.py
+  s_d9c5268c22f553::t_04a9b3e5319c7f 11-12,14-31,34,37,43-48,52-76,143,145,154-184,195-200
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "96e57fdad856014cbcf172dc16e47c2b4c7efffd",
+  "prompts": {},
+  "sessions": {
+    "s_d9c5268c22f553": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f2a4d24-d28b-4422-a636-fb3494438bfb",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
