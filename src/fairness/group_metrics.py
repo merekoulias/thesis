@@ -1,7 +1,6 @@
 """Group counts, rates, and pooled utility at the audit threshold."""
 
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -12,6 +11,7 @@ from src.fairness.types import (
     Y_COL,
     YHAT_COL,
     AuditConfig,
+    MetricSpec,
     ThresholdResult,
 )
 
@@ -20,8 +20,6 @@ _SCORE_CLIP_HI = 1.0 - 1e-15
 
 ALL_GROUPING = "ALL"
 ALL_GROUP = "all"
-
-SCORE_METRICS: Tuple[str, ...] = ("auc", "brier", "log_loss")
 
 GROUP_METRICS_COLUMNS: Tuple[str, ...] = (
     "grouping",
@@ -32,16 +30,6 @@ GROUP_METRICS_COLUMNS: Tuple[str, ...] = (
     "ci_high",
     "denominator",
 )
-
-
-@dataclass(frozen=True)
-class MetricSpec:
-    """Subpopulation, event, and denominator name for one rate metric."""
-
-    name: str
-    subpopulation: Callable[[np.ndarray, np.ndarray], np.ndarray]
-    event: Callable[[np.ndarray, np.ndarray], np.ndarray]
-    denominator: str
 
 
 def _subpop_all(y: np.ndarray, yhat: np.ndarray) -> np.ndarray:
@@ -102,6 +90,14 @@ def group_masks(
 
     Order: ``ALL / all``, then each ``groupings`` column in config order with labels
     in the order listed in ``fairness.yaml``.
+
+    Args:
+        frame: Audit frame with the grouping columns of ``config.groupings``.
+        config: Audit settings.
+
+    Returns:
+        One ``(grouping, group, mask)`` tuple per group, ``ALL / all`` first. A
+        group with no rows gets an all-False mask.
     """
     n = len(frame)
     masks: List[Tuple[str, str, np.ndarray]] = [
@@ -116,7 +112,17 @@ def group_masks(
 
 
 def rate(y: np.ndarray, yhat: np.ndarray, metric: str) -> Tuple[int, int]:
-    """Return ``(events, denominator)`` for ``metric`` on the given rows."""
+    """Return ``(events, denominator)`` for ``metric`` on the given rows.
+
+    Args:
+        y: Binary labels (1 = payment difficulties).
+        yhat: Binary decisions (1 = flagged / refused).
+        metric: Key of ``METRIC_SPECS``.
+
+    Returns:
+        ``(events, denominator)``: rows of the metric's subpopulation that have
+        the event, and rows of the subpopulation.
+    """
     spec = METRIC_SPECS[metric]
     sub = spec.subpopulation(y, yhat)
     denom = int(sub.sum())
@@ -146,7 +152,16 @@ def _count_row(
 
 
 def group_counts(frame: pd.DataFrame, config: AuditConfig) -> pd.DataFrame:
-    """Build the ``group_counts.csv`` table (ALL row plus every configured group)."""
+    """Build the ``group_counts.csv`` table (ALL row plus every configured group).
+
+    Args:
+        frame: Audit frame with a ``yhat`` column.
+        config: Audit settings.
+
+    Returns:
+        One row per group with ``grouping, group, n, positives, negatives,
+        flagged, approved, base_rate`` (``base_rate`` is NaN for an empty group).
+    """
     y = frame[Y_COL].to_numpy()
     yhat = frame[YHAT_COL].to_numpy()
     rows = []
@@ -238,7 +253,22 @@ def _metric_rows_for_group(
 def group_metrics(
     frame: pd.DataFrame, config: AuditConfig, model: str, rank: int
 ) -> pd.DataFrame:
-    """Build the long ``group_metrics.csv`` table for every group and metric."""
+    """Build the long ``group_metrics.csv`` table for every group and metric.
+
+    Rates use the metric's own denominator (``METRIC_SPECS``) with plug-in
+    intervals; ``auc`` has a within-group percentile bootstrap interval seeded by
+    ``seed_for``; ``brier`` and ``log_loss`` have mean-based intervals.
+
+    Args:
+        frame: Audit frame with a ``yhat`` column.
+        config: Audit settings (``seed``, ``n_boot``, ``confidence``, groupings).
+        model: Model name (used in the bootstrap seed key).
+        rank: Run rank (used in the bootstrap seed key).
+
+    Returns:
+        Long frame with ``GROUP_METRICS_COLUMNS``; NaN value and interval where a
+        metric is undefined for the group.
+    """
     y = frame[Y_COL].to_numpy()
     yhat = frame[YHAT_COL].to_numpy()
     score = frame[SCORE_COL].to_numpy(dtype=float)
@@ -256,7 +286,7 @@ def group_metrics(
                 rank,
             )
         )
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=list(GROUP_METRICS_COLUMNS))
 
 
 def utility(
@@ -264,18 +294,27 @@ def utility(
     threshold: ThresholdResult,
     run_metrics: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Assemble ``utility.json`` fields from run metrics and thresholded predictions."""
+    """Assemble ``utility.json`` fields from run metrics and thresholded predictions.
+
+    Args:
+        frame: Audit frame with a ``yhat`` column.
+        threshold: Result of ``base_rate_threshold`` for the same frame.
+        run_metrics: The run's ``metrics.json``.
+
+    Returns:
+        The ``utility.json`` fields of plan 5.6. ``f1 = 2TP / (2TP + FP + FN)``,
+        so it is 0 when nothing flagged is a true positive and NaN only when there
+        are no flagged rows and no positives.
+    """
     y = frame[Y_COL].to_numpy()
     yhat = frame[YHAT_COL].to_numpy()
     fold_aucs = run_metrics["fold_roc_aucs"]
-    tpr_events, tpr_denom = rate(y, yhat, "tpr")
-    ppv_events, ppv_denom = rate(y, yhat, "ppv")
-    tpr = tpr_events / tpr_denom if tpr_denom else float("nan")
-    ppv = ppv_events / ppv_denom if ppv_denom else float("nan")
-    if tpr + ppv > 0:
-        f1 = 2.0 * ppv * tpr / (ppv + tpr)
-    else:
-        f1 = float("nan")
+    true_pos, n_positives = rate(y, yhat, "tpr")
+    _, n_flagged = rate(y, yhat, "ppv")
+    tpr = true_pos / n_positives if n_positives else float("nan")
+    ppv = true_pos / n_flagged if n_flagged else float("nan")
+    f1_denom = n_flagged + n_positives
+    f1 = 2.0 * true_pos / f1_denom if f1_denom else float("nan")
     return {
         "roc_auc": float(run_metrics["oof_roc_auc"]),
         "fold_roc_auc_mean": float(run_metrics["mean_fold_roc_auc"]),

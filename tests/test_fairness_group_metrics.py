@@ -5,7 +5,7 @@ from dataclasses import replace
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.metrics import brier_score_loss, log_loss
+from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
 
 from src.fairness.config import default_fairness_config_path, load_audit_config
 from src.fairness.group_metrics import (
@@ -18,7 +18,7 @@ from src.fairness.group_metrics import (
     utility,
 )
 from src.fairness.thresholds import apply_threshold, base_rate_threshold
-from src.fairness.types import YHAT_COL
+from src.fairness.types import YHAT_COL, ThresholdResult
 
 
 def _add_yhat(frame: pd.DataFrame) -> pd.DataFrame:
@@ -45,53 +45,41 @@ def test_threshold_with_ties_warns(caplog) -> None:
     assert any("n_flagged" in rec.message for rec in caplog.records)
 
 
+_TOY_EXPECTED = {
+    "F": {
+        "approval_rate": (7, 10, 0.7),
+        "fpr": (2, 8, 0.25),
+        "fnr": (1, 2, 0.5),
+        "tpr": (1, 2, 0.5),
+        "ppv": (1, 3, 1 / 3),
+        "default_among_approved": (1, 7, 1 / 7),
+    },
+    "M": {
+        "approval_rate": (6, 10, 0.6),
+        "fpr": (1, 6, 1 / 6),
+        "fnr": (1, 4, 0.25),
+        "tpr": (3, 4, 0.75),
+        "ppv": (3, 4, 0.75),
+        "default_among_approved": (1, 6, 1 / 6),
+    },
+}
+
+
 def test_toy_rates(toy_audit_frame) -> None:
+    config = replace(load_audit_config(default_fairness_config_path()), n_boot=10)
+    table = group_metrics(toy_audit_frame, config, "lgbm", 1)
+    gender_rows = table[table["grouping"] == "CODE_GENDER"]
     y = toy_audit_frame["y"].to_numpy()
     yhat = toy_audit_frame["yhat"].to_numpy()
-    f_mask = toy_audit_frame["CODE_GENDER"] == "F"
-    m_mask = toy_audit_frame["CODE_GENDER"] == "M"
-    expected = {
-        "F": {
-            "approval_rate": (7, 10),
-            "fpr": (2, 8),
-            "fnr": (1, 2),
-            "tpr": (1, 2),
-            "ppv": (1, 3),
-            "default_among_approved": (1, 7),
-        },
-        "M": {
-            "approval_rate": (6, 10),
-            "fpr": (1, 6),
-            "fnr": (1, 4),
-            "tpr": (3, 4),
-            "ppv": (3, 4),
-            "default_among_approved": (1, 6),
-        },
-    }
-    rates_f = {
-        "approval_rate": 0.7,
-        "fpr": 2 / 8,
-        "fnr": 0.5,
-        "tpr": 0.5,
-        "ppv": 1 / 3,
-        "default_among_approved": 1 / 7,
-    }
-    rates_m = {
-        "approval_rate": 0.6,
-        "fpr": 1 / 6,
-        "fnr": 0.25,
-        "tpr": 0.75,
-        "ppv": 0.75,
-        "default_among_approved": 1 / 6,
-    }
-    for gender, metrics, rates in [
-        ("F", expected["F"], rates_f),
-        ("M", expected["M"], rates_m),
-    ]:
-        mask = f_mask if gender == "F" else m_mask
-        for name, (events, denom) in metrics.items():
+    for gender, metrics in _TOY_EXPECTED.items():
+        mask = (toy_audit_frame["CODE_GENDER"] == gender).to_numpy()
+        for name, (events, denom, value) in metrics.items():
             assert rate(y[mask], yhat[mask], name) == (events, denom)
-            assert abs(events / denom - rates[name]) < 1e-12
+            row = gender_rows[
+                (gender_rows["group"] == gender) & (gender_rows["metric"] == name)
+            ].iloc[0]
+            assert abs(row["value"] - value) < 1e-12
+            assert row["denominator"] == denom
 
 
 def test_toy_counts(toy_audit_frame) -> None:
@@ -119,7 +107,9 @@ def test_toy_counts(toy_audit_frame) -> None:
 
 def test_rates_use_metric_denominator(toy_audit_frame) -> None:
     config = load_audit_config(default_fairness_config_path())
+    config = replace(config, n_boot=10)
     metrics = group_metrics(toy_audit_frame, config, "lgbm", 1)
+    counts = group_counts(toy_audit_frame, config)
     for metric_name, denom_name in [
         ("fpr", "negatives"),
         ("fnr", "positives"),
@@ -128,16 +118,14 @@ def test_rates_use_metric_denominator(toy_audit_frame) -> None:
         spec = METRIC_SPECS[metric_name]
         assert spec.denominator == denom_name
         sub = metrics[metrics["metric"] == metric_name]
-        counts = group_counts(toy_audit_frame, config)
         merged = sub.merge(
             counts,
             on=["grouping", "group"],
             suffixes=("_m", "_c"),
         )
-        col = denom_name if denom_name != "n" else "n"
         np.testing.assert_array_equal(
             merged["denominator"].to_numpy(),
-            merged[col].to_numpy(),
+            merged[denom_name].to_numpy(),
         )
 
 
@@ -147,14 +135,16 @@ def test_group_metrics_shape(make_audit_frame) -> None:
     metrics = group_metrics(frame, config, "lgbm", 1)
     assert len(metrics) == 18 * 9
     for _, row in metrics.iterrows():
-        if np.isnan(row["value"]):
+        if row["denominator"] == 0:
+            assert np.isnan(row["value"])
             assert np.isnan(row["ci_low"]) and np.isnan(row["ci_high"])
         else:
+            assert not np.isnan(row["value"]), row.to_dict()
             assert row["ci_low"] <= row["value"] <= row["ci_high"]
 
 
 def test_brier_logloss_all_row(make_audit_frame) -> None:
-    config = load_audit_config(default_fairness_config_path())
+    config = replace(load_audit_config(default_fairness_config_path()), n_boot=10)
     frame = _add_yhat(make_audit_frame(n=500, seed=3))
     metrics = group_metrics(frame, config, "lgbm", 1)
     y = frame["y"].to_numpy()
@@ -166,6 +156,19 @@ def test_brier_logloss_all_row(make_audit_frame) -> None:
     ll_row = all_metrics[all_metrics["metric"] == "log_loss"].iloc[0]
     assert abs(brier_row["value"] - brier_score_loss(y, score)) < 1e-12
     assert abs(ll_row["value"] - log_loss(y, score, labels=[0, 1])) < 1e-12
+
+
+def test_all_row_auc_equals_pooled_auc(make_audit_frame) -> None:
+    config = replace(load_audit_config(default_fairness_config_path()), n_boot=10)
+    frame = _add_yhat(make_audit_frame(n=1500, seed=2))
+    metrics = group_metrics(frame, config, "lgbm", 1)
+    all_auc = metrics[
+        (metrics["grouping"] == ALL_GROUPING)
+        & (metrics["group"] == ALL_GROUP)
+        & (metrics["metric"] == "auc")
+    ].iloc[0]
+    pooled = roc_auc_score(frame["y"], frame["score"])
+    assert abs(all_auc["value"] - pooled) < 1e-12
 
 
 def test_auc_bootstrap_deterministic(make_audit_frame) -> None:
@@ -195,3 +198,49 @@ def test_utility_identity(make_audit_frame) -> None:
     util = utility(frame, thr, run_metrics)
     assert abs(util["tpr"] - util["ppv"]) < 1e-12
     assert abs(util["tpr"] - util["f1"]) < 1e-12
+
+
+def _utility_run_metrics() -> dict:
+    return {
+        "oof_roc_auc": 0.75,
+        "mean_fold_roc_auc": 0.74,
+        "std_fold_roc_auc": 0.01,
+        "fold_roc_aucs": [0.73, 0.75],
+        "oof_brier": 0.1,
+        "brier_reference": 0.08,
+        "oof_log_loss": 0.3,
+        "log_loss_reference": 0.28,
+    }
+
+
+def test_utility_f1_zero_without_true_positives() -> None:
+    frame = pd.DataFrame(
+        {
+            "y": np.array([1, 1, 0, 0], dtype=np.int8),
+            "yhat": np.array([0, 0, 1, 1], dtype=np.int8),
+        }
+    )
+    thr = ThresholdResult(
+        threshold=0.5, base_rate=0.5, n_rows=4, n_flagged=2, n_positives=2
+    )
+    util = utility(frame, thr, _utility_run_metrics())
+    assert util["tpr"] == 0.0 and util["ppv"] == 0.0
+    assert util["f1"] == 0.0
+
+
+def test_utility_f1_matches_counts() -> None:
+    # TP = 3, FP = 1, FN = 2 -> F1 = 6 / 9
+    frame = pd.DataFrame(
+        {
+            "y": np.array([1, 1, 1, 1, 1, 0, 0, 0], dtype=np.int8),
+            "yhat": np.array([1, 1, 1, 0, 0, 1, 0, 0], dtype=np.int8),
+        }
+    )
+    thr = ThresholdResult(
+        threshold=0.5, base_rate=5 / 8, n_rows=8, n_flagged=4, n_positives=5
+    )
+    util = utility(frame, thr, _utility_run_metrics())
+    assert abs(util["f1"] - 6 / 9) < 1e-12
+    assert abs(util["tpr"] - 3 / 5) < 1e-12
+    assert abs(util["ppv"] - 3 / 4) < 1e-12
+    assert util["fold_roc_auc_min"] == 0.73 and util["fold_roc_auc_max"] == 0.75

@@ -48,6 +48,14 @@ def base_rate_threshold(score: np.ndarray, y: np.ndarray) -> ThresholdResult:
 
 
 def apply_threshold(score: np.ndarray, threshold: float) -> np.ndarray:
-    """Return ``yhat = (score > threshold).astype(np.int8)``."""
+    """Return ``yhat = (score > threshold).astype(np.int8)``.
+
+    Args:
+        score: Predicted scores in ``[0, 1]``.
+        threshold: Decision threshold (``ThresholdResult.threshold``).
+
+    Returns:
+        ``int8`` array, 1 = flagged (credit refused), 0 = approved.
+    """
     score_arr = np.asarray(score, dtype=float)
     return (score_arr > threshold).astype(np.int8)

@@ -2,7 +2,9 @@
 
 from dataclasses import dataclass
 from statistics import NormalDist
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List
+
+import numpy as np
 
 AUDIT_COLUMNS: List[str] = [
     "SK_ID_CURR",
@@ -27,16 +29,24 @@ PTI_COL = "PTI"
 PTI_Q_COL = "PTI_Q"
 YHAT_COL = "yhat"
 
-METRIC_NAMES: Tuple[str, ...] = (
-    "approval_rate",
-    "fpr",
-    "fnr",
-    "tpr",
-    "ppv",
-    "default_among_approved",
-)
-
 OOF_COLUMNS: List[str] = ["SK_ID_CURR", "TARGET", "y_pred_proba", "fold"]
+
+
+@dataclass(frozen=True)
+class MetricSpec:
+    """Subpopulation, event, and denominator name for one rate metric.
+
+    Attributes:
+        name: Metric name (key of ``group_metrics.METRIC_SPECS``).
+        subpopulation: ``(y, yhat) -> bool mask`` of the rows the rate is over.
+        event: ``(y, yhat) -> bool mask`` of the counted event.
+        denominator: Name of the denominator (``n``, ``negatives``, ...).
+    """
+
+    name: str
+    subpopulation: Callable[[np.ndarray, np.ndarray], np.ndarray]
+    event: Callable[[np.ndarray, np.ndarray], np.ndarray]
+    denominator: str
 
 
 @dataclass(frozen=True)
