@@ -6,13 +6,26 @@ from typing import List, Tuple, Union
 import numpy as np
 import pandas as pd
 
-from src.constants import SK_ID_CURR, TABLE_FILES, TARGET_COL
+from src.constants import (
+    AGE_BAND_COL,
+    INTERSECTION_COL,
+    SK_ID_CURR,
+    TABLE_FILES,
+    TARGET_COL,
+)
 from src.fairness.types import (
+    ANNUITY_COL,
     AUDIT_COLUMNS,
+    FOLD_COL,
+    GENDER_COL,
     GROUPING_COLUMNS,
+    INCOME_COL,
     OOF_COLUMNS,
+    OOF_SCORE_COL,
     PTI_COL,
     PTI_Q_COL,
+    SCORE_COL,
+    Y_COL,
     AuditConfig,
 )
 from src.models.runs import load_oof
@@ -23,7 +36,9 @@ _GROUPS_COLUMNS: List[str] = [SK_ID_CURR] + GROUPING_COLUMNS
 
 
 def load_pti(data_dir: PathLike) -> pd.DataFrame:
-    """Return ``SK_ID_CURR`` and PTI (= ``AMT_ANNUITY / AMT_INCOME_TOTAL``, NaN if missing).
+    """Return ``SK_ID_CURR`` and PTI (= ``AMT_ANNUITY / AMT_INCOME_TOTAL``).
+
+    PTI is NaN when the annuity is missing or the income is missing or not positive.
 
     Args:
         data_dir: Directory containing ``application_train.csv``.
@@ -32,14 +47,9 @@ def load_pti(data_dir: PathLike) -> pd.DataFrame:
         Frame with columns ``SK_ID_CURR`` and ``PTI``.
     """
     csv_path = Path(data_dir) / TABLE_FILES["application_train"]
-    app = pd.read_csv(
-        csv_path,
-        usecols=["SK_ID_CURR", "AMT_ANNUITY", "AMT_INCOME_TOTAL"],
-    )
-    annuity = app["AMT_ANNUITY"]
-    income = app["AMT_INCOME_TOTAL"]
-    pti = annuity / income
-    pti = pti.where(annuity.notna() & income.notna())
+    app = pd.read_csv(csv_path, usecols=[SK_ID_CURR, ANNUITY_COL, INCOME_COL])
+    income = app[INCOME_COL]
+    pti = (app[ANNUITY_COL] / income).where(income > 0)
     return pd.DataFrame({SK_ID_CURR: app[SK_ID_CURR], PTI_COL: pti})
 
 
@@ -71,20 +81,22 @@ def assign_pti_quintiles(
     return out, cut_points
 
 
-def _validate_oof(oof: pd.DataFrame, path: Path) -> None:
+def _validate_oof(oof: pd.DataFrame, source: str) -> None:
     missing = [c for c in OOF_COLUMNS if c not in oof.columns]
     if missing:
-        raise ValueError(f"{path}: OOF missing columns {missing}")
+        raise ValueError(f"{source}: OOF missing columns {missing}")
     extra = [c for c in oof.columns if c not in OOF_COLUMNS]
     if extra:
-        raise ValueError(f"{path}: OOF has unexpected columns {extra}")
+        raise ValueError(f"{source}: OOF has unexpected columns {extra}")
     if oof[SK_ID_CURR].duplicated().any():
-        raise ValueError(f"{path}: duplicate SK_ID_CURR in OOF")
+        raise ValueError(f"{source}: duplicate SK_ID_CURR in OOF")
     if oof[OOF_COLUMNS].isna().any().any():
-        raise ValueError(f"{path}: NaN in OOF columns")
-    scores = oof["y_pred_proba"].to_numpy()
+        raise ValueError(f"{source}: NaN in OOF columns")
+    if not oof[TARGET_COL].isin([0, 1]).all():
+        raise ValueError(f"{source}: {TARGET_COL} must be 0 or 1")
+    scores = oof[OOF_SCORE_COL].to_numpy()
     if (scores < 0.0).any() or (scores > 1.0).any():
-        raise ValueError(f"{path}: y_pred_proba must lie in [0, 1]")
+        raise ValueError(f"{source}: {OOF_SCORE_COL} must lie in [0, 1]")
 
 
 def _validate_group_labels(
@@ -110,7 +122,7 @@ def load_audit_frame(
     """Build the audit frame of plan 5.2 with all checks of 5.2.
 
     Args:
-        run_dir: Model run directory (baseline variant).
+        run_dir: Model run directory (``artifacts/runs/<model>/<variant>``).
         rank: OOF rank (1 = top-level, >= 2 under robustness/).
         groups_path: Parquet with fairness grouping columns.
         data_dir: Raw CSV directory for PTI.
@@ -118,18 +130,22 @@ def load_audit_frame(
 
     Returns:
         Audit frame with columns :data:`AUDIT_COLUMNS`, OOF row order preserved.
+
+    Raises:
+        ValueError: If the OOF file, the groups file or the PTI source violates
+            the checks of plan 5.2 (the message names the offending file).
     """
     run_path = Path(run_dir)
     groups_file = Path(groups_path)
     oof = load_oof(run_path, rank)
-    oof_path = run_path / "oof_predictions.parquet"
-    if rank != 1:
-        oof_path = run_path / "robustness" / f"rank_{rank}" / "oof_predictions.parquet"
-    _validate_oof(oof, oof_path)
+    _validate_oof(oof, f"{run_path} (rank {rank})")
 
     groups = pd.read_parquet(groups_file, columns=_GROUPS_COLUMNS)
     n_oof = len(oof)
-    merged = oof.merge(groups, on=SK_ID_CURR, how="inner", validate="many_to_one")
+    try:
+        merged = oof.merge(groups, on=SK_ID_CURR, how="inner", validate="many_to_one")
+    except pd.errors.MergeError as exc:
+        raise ValueError(f"{groups_file}: duplicate SK_ID_CURR ({exc})") from exc
     if len(merged) != n_oof:
         raise ValueError(
             f"{groups_file}: not every OOF SK_ID_CURR found in groups "
@@ -139,15 +155,21 @@ def load_audit_frame(
     _validate_group_labels(merged, config, groups_file)
 
     expected_gender_age = (
-        merged["CODE_GENDER"].astype(str) + " | " + merged["AGE_BAND"].astype(str)
+        merged[GENDER_COL].astype(str) + " | " + merged[AGE_BAND_COL].astype(str)
     )
-    if not expected_gender_age.equals(merged["GENDER_AGE"].astype(str)):
+    if not expected_gender_age.equals(merged[INTERSECTION_COL].astype(str)):
         raise ValueError(
             f"{groups_file}: GENDER_AGE must equal CODE_GENDER + ' | ' + AGE_BAND"
         )
 
     pti_frame = load_pti(data_dir)
-    merged = merged.merge(pti_frame, on=SK_ID_CURR, how="left", validate="one_to_one")
+    pti_source = Path(data_dir) / TABLE_FILES["application_train"]
+    try:
+        merged = merged.merge(
+            pti_frame, on=SK_ID_CURR, how="left", validate="many_to_one"
+        )
+    except pd.errors.MergeError as exc:
+        raise ValueError(f"{pti_source}: duplicate SK_ID_CURR ({exc})") from exc
 
     pti_q, _ = assign_pti_quintiles(merged[PTI_COL], config.cdp_n_quantiles)
     merged[PTI_Q_COL] = pti_q
@@ -155,12 +177,12 @@ def load_audit_frame(
     frame = pd.DataFrame(
         {
             SK_ID_CURR: merged[SK_ID_CURR].astype(np.int64),
-            "y": merged[TARGET_COL].astype(np.int8),
-            "score": merged["y_pred_proba"].astype(np.float64),
-            "fold": merged["fold"],
-            "CODE_GENDER": merged["CODE_GENDER"],
-            "AGE_BAND": merged["AGE_BAND"],
-            "GENDER_AGE": merged["GENDER_AGE"],
+            Y_COL: merged[TARGET_COL].astype(np.int8),
+            SCORE_COL: merged[OOF_SCORE_COL].astype(np.float64),
+            FOLD_COL: merged[FOLD_COL],
+            GENDER_COL: merged[GENDER_COL],
+            AGE_BAND_COL: merged[AGE_BAND_COL],
+            INTERSECTION_COL: merged[INTERSECTION_COL],
             PTI_COL: merged[PTI_COL],
             PTI_Q_COL: merged[PTI_Q_COL],
         }

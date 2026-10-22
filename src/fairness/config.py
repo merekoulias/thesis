@@ -2,9 +2,9 @@
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Set, Union
+from typing import Any, Callable, Dict, List, Set, Union
 
-from src.fairness.types import METRIC_NAMES, AuditConfig, PairSpec
+from src.fairness.types import GROUPING_COLUMNS, METRIC_NAMES, AuditConfig, PairSpec
 from src.models.io import load_yaml_config
 
 PathLike = Union[str, Path]
@@ -40,6 +40,8 @@ _CONDITIONAL_PARITY_KEYS: Set[str] = {
 
 _PRIMARY_KEYS: Set[str] = {"pair", "metrics"}
 
+_PAIR_KEYS: Set[str] = {"id", "a", "b"}
+
 _ALLOWED_ROBUSTNESS_RANKS: Set[int] = {2, 3, 4, 5}
 
 
@@ -63,6 +65,23 @@ def _require_keys(
         raise ValueError(f"{path}: {label} unknown keys: {sorted(extra)}")
 
 
+def _cast(value: Any, to_type: Callable[[Any], Any], path: Path, name: str) -> Any:
+    """Convert ``value`` with ``to_type``; raise ``ValueError`` naming ``path``."""
+    try:
+        return to_type(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{path}: {name} has invalid value {value!r}") from exc
+
+
+def _cast_list(
+    values: Any, to_type: Callable[[Any], Any], path: Path, name: str
+) -> List[Any]:
+    """Convert every element of a list; raise ``ValueError`` naming ``path``."""
+    if not isinstance(values, list):
+        raise ValueError(f"{path}: {name} must be a list")
+    return [_cast(v, to_type, path, name) for v in values]
+
+
 def _parse_pair_filters(
     raw: Dict[str, Any], path: Path, pair_id: str, side: str
 ) -> Dict[str, str]:
@@ -70,6 +89,8 @@ def _parse_pair_filters(
         raise ValueError(
             f"{path}: pair {pair_id!r} {side} must be a mapping, got {type(raw)}"
         )
+    if not raw:
+        raise ValueError(f"{path}: pair {pair_id!r} {side} must not be empty")
     unknown_cols = set(raw.keys()) - _PAIR_FILTER_COLUMNS
     if unknown_cols:
         raise ValueError(
@@ -124,19 +145,23 @@ def load_audit_config(path: PathLike) -> AuditConfig:
 
     _require_keys(raw, _FAIRNESS_TOP_KEYS, config_path, "top level")
 
-    confidence = float(raw["confidence"])
+    confidence = _cast(raw["confidence"], float, config_path, "confidence")
     if not 0.0 < confidence < 1.0:
         raise ValueError(f"{config_path}: confidence must satisfy 0 < confidence < 1")
 
-    n_boot = int(raw["n_boot"])
+    n_boot = _cast(raw["n_boot"], int, config_path, "n_boot")
     if n_boot < 1:
         raise ValueError(f"{config_path}: n_boot must be >= 1")
 
-    calibration_bins = int(raw["calibration_bins"])
+    calibration_bins = _cast(
+        raw["calibration_bins"], int, config_path, "calibration_bins"
+    )
     if calibration_bins < 2:
         raise ValueError(f"{config_path}: calibration_bins must be >= 2")
 
-    robustness_ranks = [int(r) for r in raw["robustness_ranks"]]
+    robustness_ranks = _cast_list(
+        raw["robustness_ranks"], int, config_path, "robustness_ranks"
+    )
     bad_ranks = [r for r in robustness_ranks if r not in _ALLOWED_ROBUSTNESS_RANKS]
     if bad_ranks:
         raise ValueError(
@@ -147,8 +172,14 @@ def load_audit_config(path: PathLike) -> AuditConfig:
     groupings_raw = raw["groupings"]
     if not isinstance(groupings_raw, dict):
         raise ValueError(f"{config_path}: groupings must be a mapping")
+    if set(groupings_raw) != set(GROUPING_COLUMNS):
+        raise ValueError(
+            f"{config_path}: groupings keys must be exactly {GROUPING_COLUMNS}, "
+            f"got {sorted(groupings_raw)}"
+        )
     groupings: Dict[str, List[str]] = {
-        str(k): [str(v) for v in vals] for k, vals in groupings_raw.items()
+        str(k): _cast_list(vals, str, config_path, f"groupings[{k!r}]")
+        for k, vals in groupings_raw.items()
     }
 
     pairs_raw = raw["pairs"]
@@ -159,6 +190,7 @@ def load_audit_config(path: PathLike) -> AuditConfig:
     for entry in pairs_raw:
         if not isinstance(entry, dict):
             raise ValueError(f"{config_path}: each pair entry must be a mapping")
+        _require_keys(entry, _PAIR_KEYS, config_path, f"pair {entry.get('id')!r}")
         pair_id = str(entry["id"])
         if pair_id in pair_ids:
             raise ValueError(f"{config_path}: duplicate pair id {pair_id!r}")
@@ -180,12 +212,18 @@ def load_audit_config(path: PathLike) -> AuditConfig:
         raise ValueError(
             f"{config_path}: primary.pair {primary_pair!r} is not a defined pair id"
         )
-    primary_metrics = [str(m) for m in primary_raw["metrics"]]
+    primary_metrics = _cast_list(
+        primary_raw["metrics"], str, config_path, "primary.metrics"
+    )
     _validate_metrics(primary_metrics, config_path, "primary.metrics")
 
-    gap_metrics = [str(m) for m in raw["gap_metrics"]]
-    cell_summary_metrics = [str(m) for m in raw["cell_summary_metrics"]]
-    robustness_metrics = [str(m) for m in raw["robustness_metrics"]]
+    gap_metrics = _cast_list(raw["gap_metrics"], str, config_path, "gap_metrics")
+    cell_summary_metrics = _cast_list(
+        raw["cell_summary_metrics"], str, config_path, "cell_summary_metrics"
+    )
+    robustness_metrics = _cast_list(
+        raw["robustness_metrics"], str, config_path, "robustness_metrics"
+    )
     _validate_metrics(gap_metrics, config_path, "gap_metrics")
     _validate_metrics(cell_summary_metrics, config_path, "cell_summary_metrics")
     _validate_metrics(robustness_metrics, config_path, "robustness_metrics")
@@ -194,7 +232,9 @@ def load_audit_config(path: PathLike) -> AuditConfig:
     if not isinstance(cdp_raw, dict):
         raise ValueError(f"{config_path}: conditional_parity must be a mapping")
     _require_keys(cdp_raw, _CONDITIONAL_PARITY_KEYS, config_path, "conditional_parity")
-    cdp_pairs = [str(p) for p in cdp_raw["pairs"]]
+    cdp_pairs = _cast_list(
+        cdp_raw["pairs"], str, config_path, "conditional_parity.pairs"
+    )
     for pid in cdp_pairs:
         if pid not in pair_ids:
             raise ValueError(
@@ -230,14 +270,16 @@ def load_audit_config(path: PathLike) -> AuditConfig:
     importance_type = {str(k): str(v) for k, v in importance_type_raw.items()}
 
     return AuditConfig(
-        seed=int(raw["seed"]),
+        seed=_cast(raw["seed"], int, config_path, "seed"),
         n_boot=n_boot,
         confidence=confidence,
         variant=str(raw["variant"]),
-        models=[str(m) for m in raw["models"]],
+        models=_cast_list(raw["models"], str, config_path, "models"),
         robustness_ranks=robustness_ranks,
         calibration_bins=calibration_bins,
-        dir_reference_line=float(raw["dir_reference_line"]),
+        dir_reference_line=_cast(
+            raw["dir_reference_line"], float, config_path, "dir_reference_line"
+        ),
         groupings=groupings,
         pairs=pairs,
         primary_pair=primary_pair,
@@ -246,9 +288,21 @@ def load_audit_config(path: PathLike) -> AuditConfig:
         cell_summary_metrics=cell_summary_metrics,
         robustness_metrics=robustness_metrics,
         cdp_pairs=cdp_pairs,
-        cdp_n_quantiles=int(cdp_raw["n_quantiles"]),
-        cdp_expected_cut_points=[float(x) for x in cdp_raw["expected_cut_points"]],
-        cdp_expected_missing=int(cdp_raw["expected_missing"]),
+        cdp_n_quantiles=_cast(
+            cdp_raw["n_quantiles"], int, config_path, "conditional_parity.n_quantiles"
+        ),
+        cdp_expected_cut_points=_cast_list(
+            cdp_raw["expected_cut_points"],
+            float,
+            config_path,
+            "conditional_parity.expected_cut_points",
+        ),
+        cdp_expected_missing=_cast(
+            cdp_raw["expected_missing"],
+            int,
+            config_path,
+            "conditional_parity.expected_missing",
+        ),
         proxy_watch_list=proxy_watch_list,
         importance_type=importance_type,
     )

@@ -1,9 +1,8 @@
 """Constants and datatypes for the fairness audit package."""
 
 from dataclasses import dataclass
-from typing import Dict, List
-
-from scipy.stats import norm
+from statistics import NormalDist
+from typing import Dict, List, Tuple
 
 AUDIT_COLUMNS: List[str] = [
     "SK_ID_CURR",
@@ -17,11 +16,18 @@ AUDIT_COLUMNS: List[str] = [
     "PTI_Q",
 ]
 GROUPING_COLUMNS: List[str] = ["CODE_GENDER", "AGE_BAND", "GENDER_AGE"]
+Y_COL = "y"
+SCORE_COL = "score"
+FOLD_COL = "fold"
+GENDER_COL = "CODE_GENDER"
+OOF_SCORE_COL = "y_pred_proba"
+ANNUITY_COL = "AMT_ANNUITY"
+INCOME_COL = "AMT_INCOME_TOTAL"
 PTI_COL = "PTI"
 PTI_Q_COL = "PTI_Q"
 YHAT_COL = "yhat"
 
-METRIC_NAMES: tuple = (
+METRIC_NAMES: Tuple[str, ...] = (
     "approval_rate",
     "fpr",
     "fnr",
@@ -72,7 +78,7 @@ class AuditConfig:
     def z(self) -> float:
         """Normal quantile for two-sided ``confidence`` (Wald / plug-in intervals)."""
         tail = (1.0 - self.confidence) / 2.0
-        return float(norm.ppf(1.0 - tail))
+        return float(NormalDist().inv_cdf(1.0 - tail))
 
 
 @dataclass
