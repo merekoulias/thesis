@@ -1,0 +1,31 @@
+src/fairness/audit.py
+  s_a44ad2633f57cb::t_cd1bf2e23c57e0 1-342
+src/fairness/plots.py
+  s_a44ad2633f57cb::t_95e0da7089eaea 1-197
+src/fairness/report.py
+  s_a44ad2633f57cb::t_d322762e3df8d0 1-447
+src/fairness/summary.py
+  s_a44ad2633f57cb::t_685adf5485303a 1-135
+.cursor/plans/fairness-audit.md
+  s_a44ad2633f57cb::t_6fd99617a4116b 24
+src/fairness/__init__.py
+  s_a44ad2633f57cb::t_ca8a0cba0c1721 1-13
+tests/test_fairness_audit.py
+  s_a44ad2633f57cb::t_9efe7aab4c7fca 1-231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "55c295c15dbc8df5516ebdcf746c0940305b0b28",
+  "prompts": {},
+  "sessions": {
+    "s_a44ad2633f57cb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "a94c77a8-1af9-4681-a990-4a89e105d807",
+        "model": "composer-2.5"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
