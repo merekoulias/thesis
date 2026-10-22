@@ -3,3 +3,4 @@ data_dir: data
 artifacts_dir: artifacts
 features_dir: artifacts/features
 runs_dir: artifacts/runs
+fairness_dir: artifacts/fairness

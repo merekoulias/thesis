@@ -1,0 +1,53 @@
+# Fairness audit settings (Phase 1, Step 6). See docs/decisions.md.
+seed: 42
+n_boot: 500                # Lum et al. within-cell bootstrap and per-group AUC bootstrap
+confidence: 0.95           # z = scipy.stats.norm.ppf(0.975) = 1.959964
+variant: baseline
+models: [logreg, lgbm, mlp, rf]
+robustness_ranks: [2, 3, 4, 5]
+calibration_bins: 10
+dir_reference_line: 0.8
+
+groupings:                 # column in the audit frame -> ordered group labels
+  CODE_GENDER: [F, M]
+  AGE_BAND: ["20-29", "30-39", "40-49", "50-59", "60-69"]
+  GENDER_AGE: ["F | 20-29", "F | 30-39", "F | 40-49", "F | 50-59", "F | 60-69",
+               "M | 20-29", "M | 30-39", "M | 40-49", "M | 50-59", "M | 60-69"]
+
+pairs:                     # signed gaps are a - b
+  - {id: "F-M",              a: {CODE_GENDER: F},                    b: {CODE_GENDER: M}}
+  - {id: "F-M | 20-29",      a: {CODE_GENDER: F, AGE_BAND: "20-29"}, b: {CODE_GENDER: M, AGE_BAND: "20-29"}}
+  - {id: "F-M | 30-39",      a: {CODE_GENDER: F, AGE_BAND: "30-39"}, b: {CODE_GENDER: M, AGE_BAND: "30-39"}}
+  - {id: "F-M | 40-49",      a: {CODE_GENDER: F, AGE_BAND: "40-49"}, b: {CODE_GENDER: M, AGE_BAND: "40-49"}}
+  - {id: "F-M | 50-59",      a: {CODE_GENDER: F, AGE_BAND: "50-59"}, b: {CODE_GENDER: M, AGE_BAND: "50-59"}}
+  - {id: "F-M | 60-69",      a: {CODE_GENDER: F, AGE_BAND: "60-69"}, b: {CODE_GENDER: M, AGE_BAND: "60-69"}}
+  - {id: "20-29 - 60-69",    a: {AGE_BAND: "20-29"},                 b: {AGE_BAND: "60-69"}}
+  - {id: "20-29 - 60-69 | F", a: {CODE_GENDER: F, AGE_BAND: "20-29"}, b: {CODE_GENDER: F, AGE_BAND: "60-69"}}
+  - {id: "20-29 - 60-69 | M", a: {CODE_GENDER: M, AGE_BAND: "20-29"}, b: {CODE_GENDER: M, AGE_BAND: "60-69"}}
+
+primary:                   # pre-specified primary comparisons (no multiplicity correction)
+  pair: "F-M"
+  metrics: [fpr, fnr]
+
+gap_metrics: [approval_rate, fpr, fnr, default_among_approved]
+cell_summary_metrics: [approval_rate, fpr, fnr]
+robustness_metrics: [fpr, fnr, approval_rate]     # for the primary pair only
+
+conditional_parity:
+  pairs: ["F-M", "20-29 - 60-69"]
+  n_quantiles: 5
+  expected_cut_points: [0.104, 0.144, 0.186, 0.247]   # check only (rounded to 3 decimals)
+  expected_missing: 12
+
+proxy_watch_list:          # regex on feature names; first matching group (in this order) wins
+  protected: ["^cat__CODE_GENDER_", "^num__DAYS_BIRTH$"]
+  ext_source_1: ["^num__EXT_SOURCE_1"]
+  job_tenure: ["^num__DAYS_EMPLOYED"]
+  occupation: ["^cat__OCCUPATION_TYPE_"]
+  employer_type: ["^cat__ORGANIZATION_TYPE_"]
+  income_type: ["^cat__NAME_INCOME_TYPE_"]
+  missing_flags: ["_MISSING$"]
+importance_type:           # which saved importance to use per model; mlp has none
+  lgbm: gain
+  rf: impurity
+  logreg: coef             # absolute value is used

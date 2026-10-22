@@ -292,3 +292,76 @@ def tiny_model_configs():
             },
         ),
     }
+
+
+@pytest.fixture
+def toy_audit_frame() -> pd.DataFrame:
+    """The 20-row toy example of fairness plan 5.7 with y, yhat, score and group columns."""
+    f_y = [1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+    f_yhat = [1, 0, 1, 1, 0, 0, 0, 0, 0, 0]
+    m_y = [1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+    m_yhat = [1, 1, 1, 0, 1, 0, 0, 0, 0, 0]
+    y = np.array(f_y + m_y, dtype=np.int8)
+    yhat = np.array(f_yhat + m_yhat, dtype=np.int8)
+    n = len(y)
+    gender = ["F"] * 10 + ["M"] * 10
+    band = ["20-29"] * 5 + ["60-69"] * 5 + ["20-29"] * 5 + ["60-69"] * 5
+    score = np.where(yhat == 1, 0.9, 0.1)
+    pti = np.linspace(0.05, 0.4, n)
+    from src.fairness.io import assign_pti_quintiles
+
+    frame = pd.DataFrame(
+        {
+            "SK_ID_CURR": np.arange(1, n + 1, dtype=np.int64),
+            "y": y,
+            "yhat": yhat.astype(np.int8),
+            "score": score.astype(np.float64),
+            "fold": np.arange(n) % 2,
+            "CODE_GENDER": gender,
+            "AGE_BAND": band,
+            "GENDER_AGE": [f"{g} | {b}" for g, b in zip(gender, band)],
+            "PTI": pti.astype(np.float64),
+        }
+    )
+    frame["PTI_Q"], _ = assign_pti_quintiles(frame["PTI"], 5)
+    return frame
+
+
+@pytest.fixture
+def make_audit_frame():
+    """Factory: synthetic audit frame (default 4,000 rows) with all 10 cells."""
+    from src.fairness.io import assign_pti_quintiles
+
+    def _make(n: int = 4000, seed: int = 0) -> pd.DataFrame:
+        rng = np.random.default_rng(seed)
+        gender = rng.choice(["F", "M"], size=n, p=[0.66, 0.34])
+        band = rng.choice(["20-29", "30-39", "40-49", "50-59", "60-69"], size=n)
+        logit = (
+            -2.4
+            + 0.4 * (gender == "M")
+            - 0.15 * np.array([int(b[0]) - 2 for b in band])
+        )
+        y = (rng.random(n) < 1 / (1 + np.exp(-logit))).astype(np.int8)
+        score = np.clip(
+            1 / (1 + np.exp(-(logit + 1.2 * (y - 0.08) + rng.normal(0, 0.8, n)))),
+            1e-6,
+            1 - 1e-6,
+        )
+        pti = rng.lognormal(-1.8, 0.5, n)
+        pti[:3] = np.nan
+        frame = pd.DataFrame(
+            {
+                "SK_ID_CURR": np.arange(100_000, 100_000 + n),
+                "y": y,
+                "score": score,
+                "fold": np.arange(n) % 5,
+                "CODE_GENDER": gender,
+                "AGE_BAND": band,
+                "GENDER_AGE": [f"{g} | {b}" for g, b in zip(gender, band)],
+                "PTI": pti,
+            }
+        )
+        frame["PTI_Q"], _ = assign_pti_quintiles(frame["PTI"], 5)
+        return frame
+
+    return _make
