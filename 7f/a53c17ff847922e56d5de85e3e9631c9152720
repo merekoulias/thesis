@@ -1,0 +1,27 @@
+src/fairness/group_metrics.py
+  s_5c712c0b39109a::t_9d31d6529d8e73 1-293
+.cursor/plans/fairness-audit.md
+  s_5c712c0b39109a::t_e0c8240da809dc 20
+src/fairness/config.py
+  s_5c712c0b39109a::t_0e80d979addf03 7-8,124
+src/fairness/thresholds.py
+  s_5c712c0b39109a::t_e877ccf0b5ab41 1-53
+tests/test_fairness_group_metrics.py
+  s_5c712c0b39109a::t_54dda143ac676e 1-197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7fa53c17ff847922e56d5de85e3e9631c9152720",
+  "prompts": {},
+  "sessions": {
+    "s_5c712c0b39109a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "65028454-9359-4934-b78e-87e7dde6b96a",
+        "model": "composer-2.5"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
