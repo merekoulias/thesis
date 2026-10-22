@@ -109,6 +109,16 @@ Denominator 0 → rate and plug-in interval NaN.
 
 [Fairness metric set](decisions.md) and [Utility metrics](decisions.md) describe how these appear in reporting. Kozodoi et al.'s SP = ½(|ΔFPR| + |ΔFNR|) is **not** computed in the audit (reserved for mitigation trade-off plots).
 
+PPV is reported per group and as a gap (`ΔPPV`, in `gap_metrics`) as a diagnostic for the error-rate identity below; it is not a primary or secondary fairness metric.
+
+### Error-rate identity
+
+`comparison.error_rate_identity()` applies Chouldechova's (2017, Eq. 2.4) identity per pair side, FPR = p / (1 − p) · (1 − PPV) / PPV · (1 − FNR), so for a pair a − b:
+
+FPR_a / FPR_b = **prevalence factor** (base-rate odds ratio) × **PPV factor** ((1 − PPV_a)/PPV_a ÷ (1 − PPV_b)/PPV_b) × **1 − FNR factor** ((1 − FNR_a) ÷ (1 − FNR_b)).
+
+`fpr_ratio_identity` (the product) equals `fpr_ratio_observed` up to floating point; the check is mechanical. `fpr_gap_base_rate_only` = FPR_b · (prevalence factor − 1) is the FPR gap a − b that would remain if side a had side b's PPV and FNR, i.e. the part of the EOD that the base rates alone force. Factors are NaN when a side is empty or a rate is 0 or 1. Point estimates only (no intervals).
+
 ---
 
 ## Intervals and tests
@@ -165,7 +175,7 @@ thresholds.base_rate_threshold()  →  Ŷ
         ├─ gaps: 9 pairs × gap metrics; cell summaries (Lum)
         ├─ calibration: deciles × groups, sufficiency G-tests
         ├─ conditional: PTI quintiles × pairs, stratified G-tests, cell × quintile table
-        ├─ comparison: oracle benchmark, expected signs, Kendall τ, proxy importance
+        ├─ comparison: oracle benchmark, expected signs, error-rate identity, Kendall τ, proxy importance
         └─ robustness: ranks 2–5 primary gaps (each rank's own threshold)
         ▼
 report.write_outputs()  →  artifacts/fairness/<m>/<variant>/
@@ -187,7 +197,7 @@ Per model: `artifacts/fairness/<model>/<variant>/` ([`configs/paths.yaml`](../co
 | `utility.json` | `roc_auc`, `fold_roc_auc_mean`, `fold_roc_auc_std`, `fold_roc_auc_min`, `fold_roc_auc_max`, `brier`, `brier_reference`, `log_loss`, `log_loss_reference` (from the run's `metrics.json`), `tpr`, `ppv`, `f1` (at `t`; equal when `n_flagged == n_positives`), `n_flagged` |
 | `group_counts.csv` | `grouping, group, n, positives, negatives, flagged, approved, base_rate` (17 groups + one `ALL / all` row) |
 | `group_metrics.csv` | long: `grouping, group, metric, value, ci_low, ci_high, denominator` for `approval_rate, fpr, fnr, tpr, ppv, default_among_approved, auc, brier, log_loss` |
-| `gaps.csv` | long: `pair_id, metric, rate_a, rate_b, den_a, den_b, diff, diff_ci_low, diff_ci_high, g_stat, df, p_value, ratio, ratio_ci_low, ratio_ci_high, ratio_lower_over_higher, primary` (ratio columns only for `approval_rate`, else NaN; `primary` true only for `F-M` × `fpr` / `fnr`) |
+| `gaps.csv` | long, one row per pair × `gap_metrics` (`approval_rate, fpr, fnr, default_among_approved, ppv`): `pair_id, metric, rate_a, rate_b, den_a, den_b, diff, diff_ci_low, diff_ci_high, g_stat, df, p_value, ratio, ratio_ci_low, ratio_ci_high, ratio_lower_over_higher, primary` (ratio columns only for `approval_rate`, else NaN; `primary` true only for `F-M` × `fpr` / `fnr`) |
 | `cell_summary.csv` | `metric, k_groups, max_min_gap, max_min_ci_low, max_min_ci_high, max_cell, min_cell, var_uncorrected, var_single_corrected, var_double_corrected_ci_low, var_double_corrected_ci_high, sd_uncorrected, sd_single_corrected, sd_double_corrected_ci_low, sd_double_corrected_ci_high, g_stat, df, p_value` |
 | `calibration.csv` | `grouping, group, bin, n, events, observed_rate, ci_low, ci_high, mean_score, calibration_gap` (grouping `ALL` included) |
 | `calibration_tests.csv` | `grouping, g_stat, df, p_value` |
@@ -198,12 +208,13 @@ Per model: `artifacts/fairness/<model>/<variant>/` ([`configs/paths.yaml`](../co
 | `pti_quintiles.json` | `cut_points` (4), `n_missing` |
 | `oracle_benchmark.csv` | `pair_id, oracle_approval_a, oracle_approval_b, oracle_diff, oracle_dir, model_diff, model_dir, model_dir_ci_low, model_dir_ci_high, direction, oracle_in_model_ci` |
 | `expected_signs.csv` | `pair_id, base_rate_a, base_rate_b, expected_sign_eod, observed_eod, eod_ci_excludes_0, eod_matches, expected_sign_dfnr, observed_dfnr, dfnr_ci_excludes_0, dfnr_matches` |
+| `error_rate_identity.csv` | `pair_id, base_rate_a, base_rate_b, ppv_a, ppv_b, fnr_a, fnr_b, fpr_a, fpr_b, prevalence_factor, ppv_factor, tpr_factor, fpr_ratio_identity, fpr_ratio_observed, fpr_gap_observed, fpr_gap_base_rate_only` (see [Error-rate identity](#error-rate-identity)) |
 | `kendall.json` | `tau`, `p_value`, `n_cells` (cells used), `cells` (base rate and FPR per cell) |
 | `proxy_importance.csv` | `feature_group, n_features, importance_share, best_feature, best_feature_rank, importance_type` (absent for `mlp`) |
 | `robustness.csv` | `rank, threshold, n_flagged, roc_auc, metric, diff, diff_ci_low, diff_ci_high` (ranks 1–5; rank 1 repeated for reference) |
 | `figures/calibration_CODE_GENDER.png`, `figures/calibration_AGE_BAND.png` | observed default rate vs mean score per decile bin, one series per group, 95% error bars, diagonal y = x |
 | `figures/cells_error_rates.png` | FPR and FNR of the 10 cells with 95% error bars and the `ALL` value as a dashed line |
-| `report.md` | twelve sections: inputs and threshold, utility, primary comparisons, group tables (gender and age bands; cells), pairwise gaps, worst-group summaries, calibration, conditional demographic parity, comparison with the data, robustness ranks, scope of the numbers |
+| `report.md` | twelve sections: inputs and threshold, utility, primary comparisons, group tables (gender and age bands; cells; with PPV), pairwise gaps, worst-group summaries, calibration, conditional demographic parity, comparison with the data (oracle benchmark, expected signs, error-rate identity, Kendall τ, proxy watch list), robustness ranks, scope of the numbers |
 | `audit.log` | one INFO line per step with its duration |
 
 Cross-model `artifacts/fairness/summary_<variant>/`: `utility.csv` (`model, roc_auc, brier, log_loss, tpr, n_flagged`), `primary_gaps.csv` (`model, rank, metric, diff, diff_ci_low, diff_ci_high, p_value`), `figures/primary_gaps.png` (F − M EOD and ΔFNR per model; rank 1 with its interval, ranks 2–5 as hollow markers), `report.md`.

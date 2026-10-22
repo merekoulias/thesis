@@ -29,7 +29,7 @@ primary:                   # pre-specified primary comparisons (no multiplicity 
   pair: "F-M"
   metrics: [fpr, fnr]
 
-gap_metrics: [approval_rate, fpr, fnr, default_among_approved]
+gap_metrics: [approval_rate, fpr, fnr, default_among_approved, ppv]
 cell_summary_metrics: [approval_rate, fpr, fnr]
 robustness_metrics: [fpr, fnr, approval_rate]     # for the primary pair only
 

@@ -42,6 +42,7 @@ RATIO_CI_HIGH_COL = "ratio_ci_high"
 APPROVAL_RATE_METRIC = "approval_rate"
 FPR_METRIC = "fpr"
 FNR_METRIC = "fnr"
+PPV_METRIC = "ppv"
 DEFAULT_AMONG_APPROVED_METRIC = "default_among_approved"
 AUC_METRIC = "auc"
 BRIER_METRIC = "brier"
@@ -57,6 +58,7 @@ METRIC_LABELS: Dict[str, str] = {
     FPR_METRIC: "EOD (FPR gap)",
     FNR_METRIC: "ΔFNR",
     DEFAULT_AMONG_APPROVED_METRIC: "Δ default among approved",
+    PPV_METRIC: "ΔPPV",
 }
 
 OOF_COLUMNS: List[str] = ["SK_ID_CURR", "TARGET", "y_pred_proba", "fold"]

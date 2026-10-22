@@ -19,12 +19,14 @@ TOY_TABLES = {
     "fpr": ((2, 8), (1, 6)),
     "fnr": ((1, 2), (1, 4)),
     "default_among_approved": ((1, 7), (1, 6)),
+    "ppv": ((1, 3), (3, 4)),
 }
 TOY_DIFFS = {
     "approval_rate": 0.1,
     "fpr": 1 / 12,
     "fnr": 0.25,
     "default_among_approved": 1 / 7 - 1 / 6,
+    "ppv": 1 / 3 - 3 / 4,
 }
 
 
@@ -96,7 +98,7 @@ def test_gap_rows(make_audit_frame) -> None:
     frame[YHAT_COL] = apply_threshold(frame["score"].to_numpy(), thr.threshold)
     config = replace(load_audit_config(default_fairness_config_path()), n_boot=20)
     gaps = pair_gaps(frame, config)
-    assert len(gaps) == 9 * 4
+    assert len(gaps) == 9 * len(config.gap_metrics)
     non_approval = gaps[gaps["metric"] != "approval_rate"]
     for col in ("ratio", "ratio_ci_low", "ratio_ci_high", "ratio_lower_over_higher"):
         assert non_approval[col].isna().all()

@@ -18,6 +18,7 @@ import pandas as pd
 from src.constants import AGE_BAND_COL
 from src.fairness.calibration import calibration_table, decile_bins, sufficiency_tests
 from src.fairness.comparison import (
+    error_rate_identity,
     expected_signs,
     kendall_cells,
     oracle_benchmark,
@@ -301,6 +302,9 @@ def _run_audit(
         lambda: oracle_benchmark(frame, config, gaps),
     )
     signs = _timed_step("expected_signs", lambda: expected_signs(frame, config, gaps))
+    identity = _timed_step(
+        "error_rate_identity", lambda: error_rate_identity(frame, config)
+    )
     kendall = _timed_step("kendall_cells", lambda: kendall_cells(frame, config))
 
     importance_path = run_dir / IMPORTANCE_FILE
@@ -332,6 +336,7 @@ def _run_audit(
         "pti_quintiles": pti_meta,
         "oracle_benchmark": oracle,
         "expected_signs": signs,
+        "error_rate_identity": identity,
         "kendall": kendall,
         "proxy_importance": proxy,
         "robustness": robust,

@@ -10,6 +10,7 @@ import pytest
 from sklearn.metrics import roc_auc_score
 
 from src.fairness.comparison import (
+    error_rate_identity,
     expected_signs,
     kendall_cells,
     oracle_benchmark,
@@ -134,6 +135,43 @@ def test_expected_signs_toy(toy_audit_frame: pd.DataFrame) -> None:
     assert row["expected_sign_dfnr"] == 1
     assert row["observed_dfnr"] == pytest.approx(0.25, rel=0, abs=1e-12)
     assert row["dfnr_matches"]
+
+
+def test_error_rate_identity_toy(toy_audit_frame: pd.DataFrame) -> None:
+    config = _one_pair_config()
+    row = error_rate_identity(toy_audit_frame, config).iloc[0]
+    assert row["ppv_a"] == pytest.approx(1 / 3, rel=0, abs=1e-12)
+    assert row["ppv_b"] == pytest.approx(3 / 4, rel=0, abs=1e-12)
+    assert row["prevalence_factor"] == pytest.approx(0.375, rel=0, abs=1e-12)
+    assert row["ppv_factor"] == pytest.approx(6.0, rel=0, abs=1e-12)
+    assert row["tpr_factor"] == pytest.approx(2 / 3, rel=0, abs=1e-12)
+    assert row["fpr_ratio_observed"] == pytest.approx(1.5, rel=0, abs=1e-12)
+    assert row["fpr_ratio_identity"] == pytest.approx(1.5, rel=0, abs=1e-12)
+    assert row["fpr_gap_observed"] == pytest.approx(1 / 12, rel=0, abs=1e-12)
+    assert row["fpr_gap_base_rate_only"] == pytest.approx(
+        (1 / 6) * (0.375 - 1.0), rel=0, abs=1e-12
+    )
+
+
+def test_error_rate_identity_holds(
+    make_audit_frame: Callable[..., pd.DataFrame],
+) -> None:
+    config = load_audit_config(default_fairness_config_path())
+    frame = make_audit_frame(n=4000, seed=3)
+    thr = base_rate_threshold(frame["score"].to_numpy(), frame["y"].to_numpy())
+    frame[YHAT_COL] = apply_threshold(frame["score"].to_numpy(), thr.threshold)
+    table = error_rate_identity(frame, config)
+    assert table["fpr_ratio_observed"].notna().all()
+    np.testing.assert_allclose(
+        table["fpr_ratio_identity"], table["fpr_ratio_observed"], rtol=1e-12
+    )
+
+
+def test_error_rate_identity_empty_side_is_nan() -> None:
+    row = error_rate_identity(_one_sided_frame(), _one_pair_config()).iloc[0]
+    assert np.isnan(row["ppv_b"])
+    assert np.isnan(row["prevalence_factor"])
+    assert np.isnan(row["fpr_ratio_identity"])
 
 
 def _kendall_frame(config: AuditConfig) -> pd.DataFrame:

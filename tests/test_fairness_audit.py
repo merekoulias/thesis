@@ -42,6 +42,7 @@ EXPECTED_ARTIFACTS = [
     "pti_quintiles.json",
     "oracle_benchmark.csv",
     "expected_signs.csv",
+    "error_rate_identity.csv",
     "kendall.json",
     "robustness.csv",
     "figures/calibration_CODE_GENDER.png",
@@ -167,6 +168,8 @@ def test_run_audit_end_to_end(
         assert f"## {section}." in report
     assert "| Group | n | Positives |" in report
     assert "### Expected signs" in report
+    assert "### Error-rate identity" in report
+    assert "| FNR | PPV |" in report
     assert "Oracle DIR inside model CI" in report
     assert "SD double-corrected [95% CI]" in report
     assert "an observed `TARGET`" in report

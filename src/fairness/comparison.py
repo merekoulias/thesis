@@ -1,4 +1,4 @@
-"""Label-implied benchmark, expected signs, Kendall tau, and proxy importance."""
+"""Oracle benchmark, expected signs, error-rate identity, Kendall tau, proxies."""
 
 import re
 from typing import Any, Dict, List, Optional, Tuple
@@ -19,6 +19,7 @@ from src.fairness.types import (
     GENDER_AGE_COL,
     METRIC_COL,
     PAIR_ID_COL,
+    PPV_METRIC,
     RATIO_CI_HIGH_COL,
     RATIO_CI_LOW_COL,
     RATIO_COL,
@@ -53,6 +54,25 @@ EXPECTED_SIGNS_COLUMNS: Tuple[str, ...] = (
     "observed_dfnr",
     "dfnr_ci_excludes_0",
     "dfnr_matches",
+)
+
+ERROR_RATE_IDENTITY_COLUMNS: Tuple[str, ...] = (
+    "pair_id",
+    "base_rate_a",
+    "base_rate_b",
+    "ppv_a",
+    "ppv_b",
+    "fnr_a",
+    "fnr_b",
+    "fpr_a",
+    "fpr_b",
+    "prevalence_factor",
+    "ppv_factor",
+    "tpr_factor",
+    "fpr_ratio_identity",
+    "fpr_ratio_observed",
+    "fpr_gap_observed",
+    "fpr_gap_base_rate_only",
 )
 
 PROXY_IMPORTANCE_COLUMNS: Tuple[str, ...] = (
@@ -260,6 +280,85 @@ def expected_signs(
         )
 
     return _as_frame(rows, EXPECTED_SIGNS_COLUMNS)
+
+
+def _odds(p: float) -> float:
+    """``p / (1 - p)``, NaN when ``p`` is NaN or 1."""
+    if np.isnan(p) or p >= 1.0:
+        return float("nan")
+    return p / (1.0 - p)
+
+
+def _ratio(num: float, den: float) -> float:
+    """``num / den``, NaN when either is NaN or ``den`` is 0."""
+    if np.isnan(num) or np.isnan(den) or den == 0.0:
+        return float("nan")
+    return num / den
+
+
+def _side_rates(y: np.ndarray, yhat: np.ndarray) -> Tuple[float, float, float, float]:
+    """Base rate, PPV, FNR and FPR of one pair side (NaN where undefined)."""
+    base_rate = float(y.mean()) if y.size else float("nan")
+    out = [base_rate]
+    for metric in (PPV_METRIC, FNR_METRIC, FPR_METRIC):
+        events, den = rate(y, yhat, metric)
+        out.append(float(events / den) if den else float("nan"))
+    return out[0], out[1], out[2], out[3]
+
+
+def error_rate_identity(frame: pd.DataFrame, config: AuditConfig) -> pd.DataFrame:
+    """Split each pair's FPR ratio with Chouldechova's (2017, Eq. 2.4) identity.
+
+    Per side, ``FPR = p / (1 - p) · (1 - PPV) / PPV · (1 - FNR)``. The FPR ratio
+    a / b is therefore the product of a prevalence factor (base-rate odds ratio), a
+    PPV factor and a ``1 - FNR`` factor. ``fpr_gap_base_rate_only`` is the FPR gap
+    a − b that remains if side a had side b's PPV and FNR: the part of the gap that
+    the base rates force.
+
+    Args:
+        frame: Audit frame with ``y`` and ``yhat``.
+        config: Audit settings (pair list).
+
+    Returns:
+        DataFrame with ``ERROR_RATE_IDENTITY_COLUMNS``; factors are NaN when a
+        side is empty or a rate is 0 or 1.
+    """
+    y = frame[Y_COL].to_numpy()
+    yhat = frame[YHAT_COL].to_numpy()
+    rows: List[Dict[str, Any]] = []
+
+    for pair in config.pairs:
+        mask_a = pair_mask(frame, pair.a)
+        mask_b = pair_mask(frame, pair.b)
+        p_a, ppv_a, fnr_a, fpr_a = _side_rates(y[mask_a], yhat[mask_a])
+        p_b, ppv_b, fnr_b, fpr_b = _side_rates(y[mask_b], yhat[mask_b])
+
+        prevalence_factor = _ratio(_odds(p_a), _odds(p_b))
+        ppv_factor = _ratio(_odds(1.0 - ppv_a), _odds(1.0 - ppv_b))
+        tpr_factor = _ratio(1.0 - fnr_a, 1.0 - fnr_b)
+
+        rows.append(
+            {
+                "pair_id": pair.pair_id,
+                "base_rate_a": p_a,
+                "base_rate_b": p_b,
+                "ppv_a": ppv_a,
+                "ppv_b": ppv_b,
+                "fnr_a": fnr_a,
+                "fnr_b": fnr_b,
+                "fpr_a": fpr_a,
+                "fpr_b": fpr_b,
+                "prevalence_factor": prevalence_factor,
+                "ppv_factor": ppv_factor,
+                "tpr_factor": tpr_factor,
+                "fpr_ratio_identity": prevalence_factor * ppv_factor * tpr_factor,
+                "fpr_ratio_observed": _ratio(fpr_a, fpr_b),
+                "fpr_gap_observed": fpr_a - fpr_b,
+                "fpr_gap_base_rate_only": fpr_b * (prevalence_factor - 1.0),
+            }
+        )
+
+    return pd.DataFrame(rows, columns=list(ERROR_RATE_IDENTITY_COLUMNS))
 
 
 def kendall_cells(frame: pd.DataFrame, config: AuditConfig) -> Dict[str, Any]:

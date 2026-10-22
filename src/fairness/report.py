@@ -20,6 +20,7 @@ from src.fairness.types import (
     GENDER_AGE_COL,
     GENDER_COL,
     METRIC_LABELS,
+    PPV_METRIC,
     AuditConfig,
     PairSpec,
     ThresholdResult,
@@ -33,6 +34,13 @@ WORST_GROUP_CAVEAT = (
     "Max − min across cells is biased upwards; see the double-corrected SD interval."
 )
 
+IDENTITY_NOTE = (
+    "Chouldechova (2017): FPR = p / (1 − p) · (1 − PPV) / PPV · (1 − FNR) per "
+    "group, so FPR a / b = prevalence factor × PPV factor × (1 − FNR) factor. "
+    '"EOD at equal PPV and FNR" is the FPR gap left if side a had side b\'s PPV '
+    "and FNR (the part the base rates force)."
+)
+
 KENDALL_CAVEAT = "Kendall τ uses only ten gender × age cells and has limited power."
 
 GROUP_TABLE_HEADERS: List[str] = [
@@ -44,6 +52,7 @@ GROUP_TABLE_HEADERS: List[str] = [
     "Approval rate",
     "FPR",
     "FNR",
+    "PPV",
     "Default among approved",
     "AUC",
     "Brier",
@@ -296,6 +305,7 @@ def write_outputs(results: Dict[str, Any], out_dir: Path) -> None:
     )
     _write_csv(out / "oracle_benchmark.csv", results["oracle_benchmark"])
     _write_csv(out / "expected_signs.csv", results["expected_signs"])
+    _write_csv(out / "error_rate_identity.csv", results["error_rate_identity"])
     _write_csv(out / "robustness.csv", results["robustness"])
 
     proxy = results.get("proxy_importance")
@@ -373,6 +383,7 @@ def _group_table(
                 rate_cell(g, APPROVAL_RATE_METRIC),
                 rate_cell(g, FPR_METRIC),
                 rate_cell(g, FNR_METRIC),
+                rate_cell(g, PPV_METRIC),
                 rate_cell(g, DEFAULT_AMONG_APPROVED_METRIC),
                 auc_cell(g),
                 brier_cell(g),
@@ -579,6 +590,39 @@ def _signs_table(signs: pd.DataFrame) -> List[str]:
     return _md_table(headers, rows)
 
 
+def _identity_table(identity: pd.DataFrame) -> List[str]:
+    rows = [
+        [
+            r["pair_id"],
+            format_rate(r["base_rate_a"]),
+            format_rate(r["base_rate_b"]),
+            format_rate(r["ppv_a"]),
+            format_rate(r["ppv_b"]),
+            format_ratio(r["prevalence_factor"]),
+            format_ratio(r["ppv_factor"]),
+            format_ratio(r["tpr_factor"]),
+            format_ratio(r["fpr_ratio_observed"]),
+            format_pp_point(r["fpr_gap_observed"]),
+            format_pp_point(r["fpr_gap_base_rate_only"]),
+        ]
+        for _, r in identity.iterrows()
+    ]
+    headers = [
+        "Pair (a − b)",
+        "Base rate a",
+        "Base rate b",
+        "PPV a",
+        "PPV b",
+        "Prevalence factor",
+        "PPV factor",
+        "1 − FNR factor",
+        "FPR ratio a / b",
+        "Observed EOD",
+        "EOD at equal PPV and FNR",
+    ]
+    return _md_table(headers, rows)
+
+
 def _proxy_table(proxy: pd.DataFrame) -> List[str]:
     rows = [
         [
@@ -731,6 +775,12 @@ def write_model_report(
             "### Expected signs",
             "",
             *_signs_table(results["expected_signs"]),
+            "",
+            "### Error-rate identity",
+            "",
+            IDENTITY_NOTE,
+            "",
+            *_identity_table(results["error_rate_identity"]),
             "",
             "### Kendall τ",
             "",
