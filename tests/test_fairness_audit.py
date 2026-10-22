@@ -2,6 +2,8 @@
 
 import json
 import logging
+import subprocess
+import sys
 from dataclasses import replace
 from pathlib import Path
 from typing import Callable, Tuple
@@ -11,7 +13,12 @@ import pandas as pd
 import pytest
 from sklearn.metrics import roc_auc_score
 
-from src.fairness.audit import PACKAGE_LOGGER, _assert_all_auc_matches
+from src.fairness.audit import (
+    PACKAGE_LOGGER,
+    _assert_all_auc_matches,
+    _display_path,
+    _repo_root,
+)
 from src.fairness.audit import main as audit_main
 from src.fairness.audit import run_audit
 from src.fairness.config import default_fairness_config_path, load_audit_config
@@ -241,6 +248,43 @@ def test_cli_refuses_existing_output(
     with pytest.raises(SystemExit) as exc:
         audit_main(argv_no_overwrite)
     assert "already exists" in str(exc.value.code)
+
+
+def test_cli_module_logs_steps(
+    tmp_path: Path, make_audit_frame: Callable[..., pd.DataFrame]
+) -> None:
+    frame = make_audit_frame(n=400, seed=3)
+    runs, features, data, out = _bootstrap_run_tree(tmp_path, frame)
+    cmd = [
+        sys.executable,
+        "-m",
+        "src.fairness.audit",
+        "--model",
+        "logreg",
+        "--runs-dir",
+        str(runs),
+        "--features-dir",
+        str(features),
+        "--data-dir",
+        str(data),
+        "--out-dir",
+        str(out),
+        "--n-boot",
+        "10",
+    ]
+    proc = subprocess.run(
+        cmd, cwd=_repo_root(), capture_output=True, text=True, check=True
+    )
+    log = (out / "logreg" / "baseline" / "audit.log").read_text(encoding="utf-8")
+    for step in ("load_audit_frame", "group_metrics", "robustness_table", "report"):
+        assert f"{step} completed in" in log, step
+        assert f"{step} completed in" in proc.stdout, step
+
+
+def test_display_path_relative_inside_repo(tmp_path: Path) -> None:
+    root = _repo_root()
+    assert _display_path(root / "artifacts" / "runs") == str(Path("artifacts/runs"))
+    assert _display_path(tmp_path) == str(tmp_path.resolve())
 
 
 def test_cli_all_checks_every_output_before_running(

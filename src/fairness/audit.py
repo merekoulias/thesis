@@ -62,13 +62,23 @@ T = TypeVar("T")
 
 PACKAGE_LOGGER = "src.fairness"
 
-logger = logging.getLogger(__name__)
+# Not __name__: under ``python -m`` that is "__main__", outside PACKAGE_LOGGER.
+logger = logging.getLogger(f"{PACKAGE_LOGGER}.audit")
 
 FAIRNESS_GROUPS_FILE = "fairness_groups_train.parquet"
 
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def _display_path(path: Path) -> str:
+    """Return ``path`` relative to the repo root when inside it, else absolute."""
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(_repo_root()))
+    except ValueError:
+        return str(resolved)
 
 
 def default_paths() -> Dict[str, Path]:
@@ -234,11 +244,11 @@ def _run_audit(
     groups_path = Path(features_dir) / FAIRNESS_GROUPS_FILE
 
     input_paths = {
-        "run_dir": str(run_dir.resolve()),
-        "groups_path": str(groups_path.resolve()),
-        "data_dir": str(Path(data_dir).resolve()),
-        "oof_rank_1": str((run_dir / OOF_FILE).resolve()),
-        "metrics_rank_1": str((run_dir / METRICS_FILE).resolve()),
+        "run_dir": _display_path(run_dir),
+        "groups_path": _display_path(groups_path),
+        "data_dir": _display_path(Path(data_dir)),
+        "oof_rank_1": _display_path(run_dir / OOF_FILE),
+        "metrics_rank_1": _display_path(run_dir / METRICS_FILE),
     }
 
     frame = _timed_step(
