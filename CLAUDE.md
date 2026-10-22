@@ -19,7 +19,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 pytest                                              # all tests (testpaths = tests)
-pytest tests/test_models_pipeline.py                # one file
+pytest tests/test_models_training.py                # one file
 pytest tests/test_features_pipeline.py::test_name   # one test
 
 # Stage 1: feature engineering (reads data/*.csv → artifacts/features/)

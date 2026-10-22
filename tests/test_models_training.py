@@ -64,11 +64,6 @@ def fast_model_config() -> dict:
             "verbosity": -1,
             "n_jobs": 1,
         },
-        "outputs": {
-            "save_fold_models": True,
-            "save_feature_importance": True,
-            "save_roc_plot": True,
-        },
     }
 
 

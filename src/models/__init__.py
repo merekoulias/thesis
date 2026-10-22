@@ -1,5 +1,7 @@
 """Credit scoring models (LightGBM, random forest, logistic regression, MLP)."""
 
+from typing import Any
+
 __all__ = [
     "run_nested_cv",
     "get_model_spec",
@@ -14,7 +16,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     if name == "run_nested_cv":
         from src.models.nested import run_nested_cv
 
