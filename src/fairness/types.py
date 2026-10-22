@@ -42,6 +42,22 @@ RATIO_CI_HIGH_COL = "ratio_ci_high"
 APPROVAL_RATE_METRIC = "approval_rate"
 FPR_METRIC = "fpr"
 FNR_METRIC = "fnr"
+DEFAULT_AMONG_APPROVED_METRIC = "default_among_approved"
+AUC_METRIC = "auc"
+BRIER_METRIC = "brier"
+LOG_LOSS_METRIC = "log_loss"
+
+# Pooled row of ``group_counts.csv`` / ``group_metrics.csv``.
+ALL_GROUPING = "ALL"
+ALL_GROUP = "all"
+
+# Display labels of the gap metrics in reports and figures.
+METRIC_LABELS: Dict[str, str] = {
+    APPROVAL_RATE_METRIC: "Δ approval rate",
+    FPR_METRIC: "EOD (FPR gap)",
+    FNR_METRIC: "ΔFNR",
+    DEFAULT_AMONG_APPROVED_METRIC: "Δ default among approved",
+}
 
 OOF_COLUMNS: List[str] = ["SK_ID_CURR", "TARGET", "y_pred_proba", "fold"]
 

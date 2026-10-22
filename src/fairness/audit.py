@@ -2,17 +2,20 @@
 
 import argparse
 import logging
+import shutil
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, Iterator, List, Optional, TypeVar
 
 import numpy as np
 import pandas as pd
 
+from src.constants import AGE_BAND_COL
 from src.fairness.calibration import calibration_table, decile_bins, sufficiency_tests
 from src.fairness.comparison import (
     expected_signs,
@@ -26,10 +29,19 @@ from src.fairness.gaps import cell_summary, pair_gaps
 from src.fairness.group_metrics import group_counts, group_metrics, utility
 from src.fairness.io import PathLike, assign_pti_quintiles, load_audit_frame
 from src.fairness.plots import plot_calibration, plot_cells_error_rates
-from src.fairness.report import audit_config_payload, write_model_report, write_outputs
+from src.fairness.report import (
+    audit_config_payload,
+    write_audit_config,
+    write_model_report,
+    write_outputs,
+)
 from src.fairness.robustness import robustness_table
 from src.fairness.thresholds import apply_threshold, base_rate_threshold
 from src.fairness.types import (
+    ALL_GROUP,
+    ALL_GROUPING,
+    AUC_METRIC,
+    GENDER_COL,
     PTI_COL,
     PTI_Q_COL,
     SCORE_COL,
@@ -38,9 +50,17 @@ from src.fairness.types import (
     AuditConfig,
 )
 from src.models.io import load_yaml_config
-from src.models.runs import IMPORTANCE_FILE, load_metrics, run_dir_for
+from src.models.runs import (
+    IMPORTANCE_FILE,
+    METRICS_FILE,
+    OOF_FILE,
+    load_metrics,
+    run_dir_for,
+)
 
-PathLikeArg = Union[str, Path]
+T = TypeVar("T")
+
+PACKAGE_LOGGER = "src.fairness"
 
 logger = logging.getLogger(__name__)
 
@@ -90,23 +110,31 @@ def _package_versions() -> Dict[str, str]:
     }
 
 
-def _setup_logging(out_dir: Path) -> None:
+@contextmanager
+def _audit_logging(out_dir: Path) -> Iterator[None]:
+    """Log the package's INFO records to stdout and ``<out_dir>/audit.log``."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    log_path = out_dir / "audit.log"
     fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
-    root = logging.getLogger()
-    root.setLevel(logging.INFO)
-    for handler in list(root.handlers):
-        root.removeHandler(handler)
-    stream = logging.StreamHandler(sys.stdout)
-    stream.setFormatter(fmt)
-    file_handler = logging.FileHandler(log_path, encoding="utf-8")
-    file_handler.setFormatter(fmt)
-    root.addHandler(stream)
-    root.addHandler(file_handler)
+    pkg = logging.getLogger(PACKAGE_LOGGER)
+    previous_level = pkg.level
+    handlers: List[logging.Handler] = [
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(out_dir / "audit.log", encoding="utf-8"),
+    ]
+    for handler in handlers:
+        handler.setFormatter(fmt)
+        pkg.addHandler(handler)
+    pkg.setLevel(logging.INFO)
+    try:
+        yield
+    finally:
+        pkg.setLevel(previous_level)
+        for handler in handlers:
+            pkg.removeHandler(handler)
+            handler.close()
 
 
-def _timed_step(name: str, func):
+def _timed_step(name: str, func: Callable[[], T]) -> T:
     start = time.perf_counter()
     result = func()
     logger.info("%s completed in %.1fs", name, time.perf_counter() - start)
@@ -117,13 +145,35 @@ def _model_out_dir(out_dir: PathLike, model: str, variant: str) -> Path:
     return Path(out_dir) / model / variant
 
 
+def check_output_free(out_dir: PathLike, model: str, variant: str) -> Path:
+    """Return the model output directory; raise if it already holds files.
+
+    Args:
+        out_dir: Fairness output root.
+        model: Registry model name.
+        variant: Run variant name.
+
+    Returns:
+        Path to ``<out_dir>/<model>/<variant>/``.
+
+    Raises:
+        FileExistsError: If the directory exists and is not empty.
+    """
+    path = _model_out_dir(out_dir, model, variant)
+    if path.exists() and any(path.iterdir()):
+        raise FileExistsError(
+            f"Output directory {path} already exists; pass --overwrite to replace it."
+        )
+    return path
+
+
 def _assert_all_auc_matches(
     metrics_frame: pd.DataFrame, run_auc: float, tol: float = 1e-12
 ) -> None:
     row = metrics_frame[
-        (metrics_frame["grouping"] == "ALL")
-        & (metrics_frame["group"] == "all")
-        & (metrics_frame["metric"] == "auc")
+        (metrics_frame["grouping"] == ALL_GROUPING)
+        & (metrics_frame["group"] == ALL_GROUP)
+        & (metrics_frame["metric"] == AUC_METRIC)
     ]
     if row.empty:
         raise ValueError("ALL / all / auc row missing from group_metrics")
@@ -150,18 +200,35 @@ def run_audit(
         features_dir: Feature artifacts directory.
         data_dir: Raw CSV directory for PTI.
         out_dir: Fairness output root.
-        overwrite: Replace an existing model output directory.
+        overwrite: Replace an existing model output directory (removed first).
 
     Returns:
         Path to ``<out_dir>/<model>/<variant>/``.
+
+    Raises:
+        FileExistsError: If the output directory is not empty and ``overwrite``
+            is false.
     """
-    out_path = _model_out_dir(out_dir, model, config.variant)
-    if out_path.exists() and any(out_path.iterdir()) and not overwrite:
-        raise SystemExit(
-            1,
-            f"Output directory {out_path} already exists; pass --overwrite to replace it.",
-        )
-    _setup_logging(out_path)
+    oof_path = run_dir_for(runs_dir, model, config.variant) / OOF_FILE
+    if not oof_path.exists():
+        raise FileNotFoundError(f"OOF predictions not found: {oof_path}")
+    if overwrite:
+        out_path = _model_out_dir(out_dir, model, config.variant)
+        if out_path.exists():
+            shutil.rmtree(out_path)
+    out_path = check_output_free(out_dir, model, config.variant)
+    with _audit_logging(out_path):
+        return _run_audit(model, config, runs_dir, features_dir, data_dir, out_path)
+
+
+def _run_audit(
+    model: str,
+    config: AuditConfig,
+    runs_dir: PathLike,
+    features_dir: PathLike,
+    data_dir: PathLike,
+    out_path: Path,
+) -> Path:
     started_at = datetime.now(timezone.utc)
     run_dir = run_dir_for(runs_dir, model, config.variant)
     groups_path = Path(features_dir) / FAIRNESS_GROUPS_FILE
@@ -170,8 +237,8 @@ def run_audit(
         "run_dir": str(run_dir.resolve()),
         "groups_path": str(groups_path.resolve()),
         "data_dir": str(Path(data_dir).resolve()),
-        "oof_rank_1": str((run_dir / "oof_predictions.parquet").resolve()),
-        "metrics_rank_1": str((run_dir / "metrics.json").resolve()),
+        "oof_rank_1": str((run_dir / OOF_FILE).resolve()),
+        "metrics_rank_1": str((run_dir / METRICS_FILE).resolve()),
     }
 
     frame = _timed_step(
@@ -238,17 +305,6 @@ def run_audit(
         lambda: robustness_table(run_dir, config, groups_path, data_dir),
     )
 
-    finished_at = datetime.now(timezone.utc)
-    audit_cfg = audit_config_payload(
-        config,
-        model,
-        input_paths,
-        _git_commit(),
-        _package_versions(),
-        started_at,
-        finished_at,
-    )
-
     results: Dict[str, Any] = {
         "model": model,
         "threshold": thr,
@@ -269,7 +325,6 @@ def run_audit(
         "kendall": kendall,
         "proxy_importance": proxy,
         "robustness": robust,
-        "audit_config": audit_cfg,
     }
 
     _timed_step("write_outputs", lambda: write_outputs(results, out_path))
@@ -280,12 +335,17 @@ def run_audit(
         lambda: (
             plot_calibration(
                 calibration,
-                "CODE_GENDER",
+                GENDER_COL,
                 model,
-                fig_dir / "calibration_CODE_GENDER.png",
+                fig_dir / f"calibration_{GENDER_COL}.png",
+                config,
             ),
             plot_calibration(
-                calibration, "AGE_BAND", model, fig_dir / "calibration_AGE_BAND.png"
+                calibration,
+                AGE_BAND_COL,
+                model,
+                fig_dir / f"calibration_{AGE_BAND_COL}.png",
+                config,
             ),
             plot_cells_error_rates(
                 metrics_df, config, model, fig_dir / "cells_error_rates.png"
@@ -294,6 +354,19 @@ def run_audit(
     )
 
     _timed_step("report", lambda: write_model_report(results, out_path, config))
+
+    write_audit_config(
+        audit_config_payload(
+            config,
+            model,
+            input_paths,
+            _git_commit(),
+            _package_versions(),
+            started_at,
+            datetime.now(timezone.utc),
+        ),
+        out_path,
+    )
     return out_path
 
 
@@ -301,7 +374,7 @@ def _parse_args(argv: Optional[List[str]]) -> argparse.Namespace:
     paths = default_paths()
     parser = argparse.ArgumentParser(description="Run the baseline fairness audit")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--model", choices=["logreg", "lgbm", "mlp", "rf"])
+    group.add_argument("--model", help="Registry model name (must be in config)")
     group.add_argument("--all", action="store_true", help="Audit every model in config")
     parser.add_argument("--config", type=Path, default=default_fairness_config_path())
     parser.add_argument("--runs-dir", type=Path, default=paths["runs_dir"])
@@ -326,6 +399,15 @@ def main(argv: Optional[List[str]] = None) -> None:
         config = replace(config, n_boot=args.n_boot)
 
     models = list(config.models) if args.all else [args.model]
+    unknown = [m for m in models if m not in config.models]
+    if unknown:
+        sys.exit(f"error: model(s) {unknown} not in config models {config.models}")
+    if not args.overwrite:
+        try:
+            for model in models:
+                check_output_free(args.out_dir, model, config.variant)
+        except FileExistsError as exc:
+            sys.exit(f"error: {exc}")
     for model in models:
         run_audit(
             model,

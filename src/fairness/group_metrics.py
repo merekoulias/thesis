@@ -7,6 +7,11 @@ import pandas as pd
 
 from src.fairness.stats import bootstrap_auc_ci, mean_ci, proportion_ci, seed_for
 from src.fairness.types import (
+    ALL_GROUP,
+    ALL_GROUPING,
+    AUC_METRIC,
+    BRIER_METRIC,
+    LOG_LOSS_METRIC,
     SCORE_COL,
     Y_COL,
     YHAT_COL,
@@ -17,9 +22,6 @@ from src.fairness.types import (
 
 _SCORE_CLIP_LO = 1e-15
 _SCORE_CLIP_HI = 1.0 - 1e-15
-
-ALL_GROUPING = "ALL"
-ALL_GROUP = "all"
 
 GROUP_METRICS_COLUMNS: Tuple[str, ...] = (
     "grouping",
@@ -214,7 +216,7 @@ def _metric_rows_for_group(
         {
             "grouping": grouping,
             "group": group,
-            "metric": "auc",
+            "metric": AUC_METRIC,
             "value": auc_val,
             "ci_low": auc_lo,
             "ci_high": auc_hi,
@@ -227,7 +229,7 @@ def _metric_rows_for_group(
         {
             "grouping": grouping,
             "group": group,
-            "metric": "brier",
+            "metric": BRIER_METRIC,
             "value": brier_val,
             "ci_low": brier_lo,
             "ci_high": brier_hi,
@@ -240,7 +242,7 @@ def _metric_rows_for_group(
         {
             "grouping": grouping,
             "group": group,
-            "metric": "log_loss",
+            "metric": LOG_LOSS_METRIC,
             "value": ll_val,
             "ci_low": ll_lo,
             "ci_high": ll_hi,

@@ -1,15 +1,17 @@
 """Tests for the fairness audit runner, outputs, and summary CLI."""
 
 import json
+import logging
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Tuple
 
 import numpy as np
 import pandas as pd
 import pytest
 from sklearn.metrics import roc_auc_score
 
+from src.fairness.audit import PACKAGE_LOGGER, _assert_all_auc_matches
 from src.fairness.audit import main as audit_main
 from src.fairness.audit import run_audit
 from src.fairness.config import default_fairness_config_path, load_audit_config
@@ -90,6 +92,7 @@ def _write_importance(path: Path) -> None:
     df = pd.DataFrame(
         {
             "feature": ["cat__CODE_GENDER_F", "num__EXT_SOURCE_1", "num__DAYS_BIRTH"],
+            "fold": [0, 0, 0],
             "importance_type": ["coef", "coef", "coef"],
             "importance": [0.5, 0.3, 0.2],
         }
@@ -102,7 +105,7 @@ def _bootstrap_run_tree(
     frame: pd.DataFrame,
     model: str = "logreg",
     with_importance: bool = True,
-) -> tuple[Path, Path, Path, Path]:
+) -> Tuple[Path, Path, Path, Path]:
     runs = tmp_path / "runs"
     features = tmp_path / "features"
     data = tmp_path / "data"
@@ -155,6 +158,59 @@ def test_run_audit_end_to_end(
     report = (model_out / "report.md").read_text(encoding="utf-8")
     for section in range(1, 13):
         assert f"## {section}." in report
+    assert "| Group | n | Positives |" in report
+    assert "### Expected signs" in report
+    assert "Oracle DIR inside model CI" in report
+    assert "SD double-corrected [95% CI]" in report
+    assert "an observed `TARGET`" in report
+    assert "equal-opportunity difference" in report
+    assert "p = <" not in report
+    assert "DIR reference line: 0.80" in report
+    config_json = json.loads((model_out / "audit_config.json").read_text())
+    assert config_json["models"] == list(config.models)
+    assert config_json["n_boot"] == 20
+
+
+def test_audit_closes_log_handlers(
+    tmp_path: Path, make_audit_frame: Callable[..., pd.DataFrame]
+) -> None:
+    frame = make_audit_frame(n=400, seed=7)
+    runs, features, data, out = _bootstrap_run_tree(tmp_path, frame)
+    config = replace(load_audit_config(default_fairness_config_path()), n_boot=10)
+    pkg = logging.getLogger(PACKAGE_LOGGER)
+    before = list(pkg.handlers)
+    run_audit("logreg", config, runs, features, data, out)
+    assert pkg.handlers == before
+
+
+def test_run_audit_refuses_existing_output(
+    tmp_path: Path, make_audit_frame: Callable[..., pd.DataFrame]
+) -> None:
+    frame = make_audit_frame(n=400, seed=8)
+    runs, features, data, out = _bootstrap_run_tree(tmp_path, frame)
+    config = replace(load_audit_config(default_fairness_config_path()), n_boot=10)
+    model_out = out / "logreg" / "baseline"
+    run_audit("logreg", config, runs, features, data, out)
+    with pytest.raises(FileExistsError, match="--overwrite"):
+        run_audit("logreg", config, runs, features, data, out)
+    (model_out / "stale.txt").write_text("old", encoding="utf-8")
+    run_audit("logreg", config, runs, features, data, out, overwrite=True)
+    assert not (model_out / "stale.txt").exists()
+    assert (model_out / "report.md").exists()
+
+
+def test_all_auc_assert_raises_on_mismatch() -> None:
+    metrics = pd.DataFrame(
+        {
+            "grouping": ["ALL"],
+            "group": ["all"],
+            "metric": ["auc"],
+            "value": [0.7],
+        }
+    )
+    _assert_all_auc_matches(metrics, 0.7)
+    with pytest.raises(ValueError, match="run oof_roc_auc"):
+        _assert_all_auc_matches(metrics, 0.71)
 
 
 def test_cli_refuses_existing_output(
@@ -184,7 +240,34 @@ def test_cli_refuses_existing_output(
     argv_no_overwrite = [a for a in argv if a != "--overwrite"]
     with pytest.raises(SystemExit) as exc:
         audit_main(argv_no_overwrite)
-    assert exc.value.code != 0
+    assert "already exists" in str(exc.value.code)
+
+
+def test_cli_all_checks_every_output_before_running(
+    tmp_path: Path, make_audit_frame: Callable[..., pd.DataFrame]
+) -> None:
+    frame = make_audit_frame(n=400, seed=9)
+    runs, features, data, out = _bootstrap_run_tree(tmp_path, frame)
+    blocked = out / "mlp" / "baseline"
+    blocked.mkdir(parents=True)
+    (blocked / "old.txt").write_text("old", encoding="utf-8")
+    argv = [
+        "--all",
+        "--runs-dir",
+        str(runs),
+        "--features-dir",
+        str(features),
+        "--data-dir",
+        str(data),
+        "--out-dir",
+        str(out),
+        "--n-boot",
+        "10",
+    ]
+    with pytest.raises(SystemExit) as exc:
+        audit_main(argv)
+    assert "mlp" in str(exc.value.code)
+    assert not (out / "logreg").exists()
 
 
 def test_mlp_without_importance(
@@ -213,6 +296,9 @@ def test_summary(tmp_path: Path, make_audit_frame: Callable[..., pd.DataFrame]) 
     assert set(gaps["model"]) == {"logreg", "lgbm"}
     assert set(gaps["rank"]) == {1, 2, 3, 4, 5}
     assert (summary_dir / "figures" / "primary_gaps.png").exists()
+    report = (summary_dir / "report.md").read_text(encoding="utf-8")
+    assert "Ranks 2–5 (min to max)" in report
+    assert "| logreg |" in report and "| lgbm |" in report
 
 
 def test_audit_deterministic(
