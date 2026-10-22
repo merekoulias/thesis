@@ -1,0 +1,27 @@
+.cursor/plans/fairness-audit.md
+  s_7c7d8ffd6b77d5::t_303f9f79a9215e 20,292,880
+src/fairness/group_metrics.py
+  s_7c7d8ffd6b77d5::t_611dc01dedc90d 3,14,93-100,115-125,155-164,256-271,289,297-308,312-317
+src/fairness/thresholds.py
+  s_7c7d8ffd6b77d5::t_bf9c3a1bf0ead7 51-59
+src/fairness/types.py
+  s_7c7d8ffd6b77d5::t_a213095b0137a0 5-7,35-51
+tests/test_fairness_group_metrics.py
+  s_7c7d8ffd6b77d5::t_dfbbc87103e6dc 8,21,48-67,69-71,74-76,78-82,110,112,128,138-139,142,147,161-173,201-246
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ccda933ae06e07880f0291d06b4d973057d2e70",
+  "prompts": {},
+  "sessions": {
+    "s_7c7d8ffd6b77d5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de031bf2-ef03-4104-82bf-b11c2d067ef8",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
