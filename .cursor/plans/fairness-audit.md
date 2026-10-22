@@ -8,13 +8,13 @@
 
 ## Progress log (executor fills this in)
 
-**BASE commit** (HEAD of `main` before Phase 0; written in Phase 0): `________`
+**BASE commit** (HEAD of `main` before Phase 0; written in Phase 0): `a9eac5a`
 
 Phase commits are found with `git log --oneline --grep "fairness: phase <N>"`.
 
 | Phase | Title | Status (`todo` / `in progress` / `done`) | Review verdict | Notes |
 | ----- | ----- | ---------------------------------------- | -------------- | ----- |
-| 0 | Preconditions and baseline snapshot | todo | | |
+| 0 | Preconditions and baseline snapshot | done | | BASE `a9eac5a`; `git status` clean at start; pytest 154 passed (38 s); black/isort OK; scipy 1.18.0 matplotlib 3.11.0; models plan Phase 7 `done` PASS WITH NITS; inputs: 4× baseline OOF+metrics (+ feature_importance except mlp), 16× robustness OOF rank_2–5, `fairness_groups_train.parquet` 307507 rows, `data/application_train.csv` present. |
 | 1 | Config, types and audit input loading | todo | | |
 | 2 | Statistics core | todo | | |
 | 3 | Threshold, group table and utility | todo | | |
