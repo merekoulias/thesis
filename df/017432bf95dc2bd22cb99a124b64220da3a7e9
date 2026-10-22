@@ -1,0 +1,27 @@
+.cursor/plans/fairness-audit.md
+  s_ca2e4cf0e34328::t_6beb57bd429a53 18,752
+src/fairness/config.py
+  s_ca2e4cf0e34328::t_df6b736cf93971 5,7,43-44,68-84,92-93,148,152,156-158,162-164,175-179,181-182,193,215-217,220-226,235-237,273,277,280-282,291-305
+src/fairness/io.py
+  s_ca2e4cf0e34328::t_b1ae2da297ccde 9-15,17,19-20,22,24,27-28,39-41,50-52,84,87,90,92,94-97,99,125,133-136,141,145-148,158,160,166-172,180-185
+src/fairness/types.py
+  s_ca2e4cf0e34328::t_285b32f5574a90 4-5,19-25,30,81
+tests/test_fairness_config.py
+  s_ca2e4cf0e34328::t_4c5e9ad94394e3 12,53-57,66-70,77,95,118-121,134,141-146,158-160,196-199,207,213-216,220-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df017432bf95dc2bd22cb99a124b64220da3a7e9",
+  "prompts": {},
+  "sessions": {
+    "s_ca2e4cf0e34328": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "80c8d5e2-3fdc-4d85-9b8f-f75ab2fe67e0",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
