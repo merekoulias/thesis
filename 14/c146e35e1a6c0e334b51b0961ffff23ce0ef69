@@ -1,0 +1,33 @@
+.cursor/plans/multi-model-nested-cv.md
+  s_861e7e4dadd9b6::t_8640d28fa74764 25
+CLAUDE.md
+  s_861e7e4dadd9b6::t_40b8c42295f7dc 10
+configs/paths.yaml
+  s_861e7e4dadd9b6::t_fd8c7acf94a8c4 5
+requirements.txt
+  s_861e7e4dadd9b6::t_680115f00ffcff 7,10
+src/README.md
+  s_861e7e4dadd9b6::t_c2cb5d58238d84 41
+src/models/__init__.py
+  s_861e7e4dadd9b6::t_5be39c64351ce1 1,4-11,18-19,21-23,25-27,29-49
+tests/test_models_runs.py
+  s_861e7e4dadd9b6::t_d49d1d493bbc47 66
+tests/test_models_training.py
+  s_861e7e4dadd9b6::t_cc565e0a1c7b05 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "14c146e35e1a6c0e334b51b0961ffff23ce0ef69",
+  "prompts": {},
+  "sessions": {
+    "s_861e7e4dadd9b6": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "33e04196-0e05-4219-b538-3b2a6396b73d",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
