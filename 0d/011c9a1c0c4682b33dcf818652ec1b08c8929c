@@ -1,0 +1,31 @@
+.cursor/plans/fairness-audit.md
+  s_1c0973ff2f2cfc::t_3b6b4344119771 26
+.cursor/rules/thesis-context.mdc
+  s_1c0973ff2f2cfc::t_47e4186177f42c 22
+CLAUDE.md
+  s_1c0973ff2f2cfc::t_8d82c830c94fc4 28-30,54,62
+docs/credit_scoring.md
+  s_1c0973ff2f2cfc::t_985a6bdaff93e1 118-119,121,123-124,126-127,130-131
+docs/fairness_audit.md
+  s_1c0973ff2f2cfc::t_0fa61330126baf 32-57,118-143,145-148,150,183-211
+docs/thesis-overview.md
+  s_1c0973ff2f2cfc::t_3a97bcbb404df8 70
+src/README.md
+  s_1c0973ff2f2cfc::t_5264a6cd942dd8 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0d011c9a1c0c4682b33dcf818652ec1b08c8929c",
+  "prompts": {},
+  "sessions": {
+    "s_1c0973ff2f2cfc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "39d47f03-e476-4b38-91a1-c51b03b23657",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
