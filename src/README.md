@@ -11,7 +11,7 @@ src/
 ├── data/        # Load CSVs, validate keys, drop XNA, prepare splits
 ├── features/    # Application cleaning + child-table aggregates → client matrix
 ├── models/      # Four scorers, nested CV, OOF predictions, utility metrics
-└── fairness/    # Fairness metrics + mitigation (thesis core; implement after the scorer)
+└── fairness/    # Baseline fairness audit on OOF scores (Step 6); mitigation TODO
 ```
 
 

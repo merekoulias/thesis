@@ -115,23 +115,19 @@ python -m src.features.pipeline \
   --data-dir data \
   --artifacts-dir artifacts/features
 
-# 2. Train baseline scorer
-python -m src.models.pipeline \
+# 2. Nested-CV run per model (writes artifacts/runs/<model>/baseline/)
+python -m src.models.run --model lgbm \
   --features-dir artifacts/features \
-  --models-dir artifacts/models
+  --runs-dir artifacts/runs
 
-# Optional: custom config
-python -m src.models.pipeline --config configs/model.yaml
+# Cross-model summary of the runs
+python -m src.models.summary
+
+# Legacy check: generic CV core reproduces train_lgbm_cv (configs/model.yaml)
+python -m src.models.legacy_check
 ```
 
-**Python API:**
-
-```python
-from src.models import train_credit_scorer, save_model_artifacts
-
-artifacts = train_credit_scorer(features_dir="artifacts/features")
-save_model_artifacts(artifacts, "artifacts/models")
-```
+The legacy CLI `src/models/pipeline.py` and its `artifacts/models/` outputs were removed in the models plan's cleanup phase; the rest of this page still describes the legacy LightGBM baseline and is rewritten by that plan's documentation phase.
 
 ---
 

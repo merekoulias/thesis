@@ -67,7 +67,7 @@ thesis/
 │   ├── data/                      # load CSVs, validate keys, drop XNA, splits
 │   ├── features/                  # aggregates + application cleaning → client matrix
 │   ├── models/                    # LightGBM CV, save OOF preds + metrics
-│   └── fairness/                  # metrics + mitigation (thesis core; add when ready)
+│   └── fairness/                  # baseline fairness audit (Step 6); mitigation TODO
 ├── configs/                       # paths, model params, protected-attr names
 ├── tests/                         # light tests on joins / shapes / model contracts
 └── docs/                          # Project documentation

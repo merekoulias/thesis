@@ -19,7 +19,7 @@ Bias in ML credit scoring and bias mitigation (pre-, in-, and post-processing). 
 - `src/` = **Feature engineering** across all tables, then **credit scoring model** (LightGBM on engineered features).
 - **Goal:** one credit scorer built from all relational tables → fairness audit → mitigation. Performance is nice-to-have, not an RQ.
 
-## Fairness work (not yet implemented)
+## Fairness work (baseline audit implemented in `src/fairness/`, see `docs/fairness_audit.md`; mitigation TODO)
 - Metrics: primary = equal opportunity (FPR gap) and equalized odds (FPR + FNR gaps); secondary = approval-rate difference and disparate impact ratio, plus conditional demographic parity as a secondary diagnostic (conditioned only on payment-to-income quintiles, `AMT_ANNUITY / AMT_INCOME_TOTAL`); diagnostic = calibration by group. Over gender, age bands and gender × 10-year age cells, with worst-group gaps. Details in `docs/decisions.md`.
 - Utility: ROC AUC and TPR at `t_m`. Every group value and gap gets a 95% interval; test p-values come second. Details in `docs/decisions.md`.
 - Mitigation: one technique per stage (pre/in/post) — exact methods TBD; target both error-rate gaps (equalized odds).

@@ -25,8 +25,9 @@ pytest tests/test_features_pipeline.py::test_name   # one test
 # Stage 1: feature engineering (reads data/*.csv → artifacts/features/)
 python -m src.features.pipeline --data-dir data --artifacts-dir artifacts/features
 
-# Stage 2: LightGBM CV (reads artifacts/features/ → artifacts/models/), ~2 min on full data
-python -m src.models.pipeline --features-dir artifacts/features --models-dir artifacts/models [--config configs/model.yaml]
+# Stage 2: nested-CV credit scorers (reads artifacts/features/ → artifacts/runs/<model>/baseline/), hours per model
+python -m src.models.run --model {logreg,lgbm,mlp,rf} --features-dir artifacts/features --runs-dir artifacts/runs [--resume | --overwrite]
+python -m src.models.summary
 
 # Execute an EDA notebook in place
 jupyter nbconvert --to notebook --execute --inplace analysis/notebooks/00_dataset_overview.ipynb
@@ -50,7 +51,7 @@ Pipeline flow is `src/data/` → `src/features/` → `src/models/` → `src/fair
   4. `encoding.py`: missing indicators for high-missing numerics → median impute → one-hot **all** categoricals (no label encoding). Fit on train only; test uses `handle_unknown="ignore"`.
   Outputs: `X_train/X_test/y_train/ids_*/fairness_groups_*.parquet` + `metadata.json`.
 - **`src/models/`** — `io.load_training_data()` enforces the data contract (row alignment, unique IDs, no `TARGET` in `X`, finite numeric `X`, encoded protected columns present — it raises if they're missing). `training.train_lgbm_cv()` runs `StratifiedKFold` with per-fold early stopping, sanitizes feature names for LightGBM and maps importances back. No class weights/resampling, no tuning, no threshold. Outputs `oof_predictions.parquet` (`SK_ID_CURR`, `TARGET`, `y_pred_proba`, `fold`), `metrics.json`, ROC, fold models, importances. `X_test` is not used. Baseline OOF ROC AUC ≈ 0.784.
-- **`src/fairness/`** — Baseline fairness audit (Phase 1, Step 6): consumes `artifacts/runs/<model>/<variant>/oof_predictions.parquet` (plus robustness ranks 2–5), `artifacts/features/fairness_groups_train.parquet`, and raw PTI from `data/application_train.csv`; writes CSV/JSON, figures and `report.md` under `artifacts/fairness/`. Cross-model summary via `python -m src.fairness.summary`. See `docs/fairness_audit.md`. Mitigation (`src/mitigation/`, re-audit on mitigation runs) is still TODO.
+- **`src/fairness/`** — Baseline fairness audit (Phase 1, Step 6): consumes `artifacts/runs/<model>/<variant>/oof_predictions.parquet` (plus robustness ranks 2–5), `artifacts/features/fairness_groups_train.parquet`, and raw PTI from `data/application_train.csv`; writes CSV/JSON, figures and `report.md` under `artifacts/fairness/`. One group-blind threshold per model and robustness rank that flags the base-rate share (`thresholds.py`); rates, gaps and counts (n, positives, negatives, flagged) are reported for every gender × age cell. Cross-model summary via `python -m src.fairness.summary`. See `docs/fairness_audit.md`. Mitigation (`src/mitigation/`, re-audit on mitigation runs) is still TODO.
 - **`analysis/notebooks/`** — EDA notebooks `00`–`07` (one per table/domain, `07` = protected attributes/proxies) and `08_pre_modeling_bias_audit` (Phase 1, Step 5: data-level disparities, missingness and proxies; needs `artifacts/features/`). Out of scope there: credit-model training and fairness metrics on predictions. Notebook helpers (statistics, the auxiliary gender-predictability classifier) live in `analysis/helpers/`, not in `src/fairness/`. Notebooks resolve `data/` relative to the repo root. Consolidated findings in `docs/EDA.md`.
 - **`tests/`** — light contract tests on tiny in-memory fixtures (`tests/conftest.py::tiny_home_credit_data`): key integrity, output shapes, which columns go into `X`. Don't add tests that need the full CSVs.
 
@@ -58,7 +59,7 @@ Home Credit tables are large (millions of rows in `bureau_balance`, `installment
 
 ## Docs and decisions
 
-Detailed write-ups live in `docs/` (`feature_engineering.md`, `child_tables_aggregation.md`, `encoding.md`, `credit_scoring.md`, `EDA.md`, `glossary.md`, `thesis-overview.md`). Keep them in sync when changing pipeline behaviour.
+Detailed write-ups live in `docs/` (`feature_engineering.md`, `child_tables_aggregation.md`, `encoding.md`, `credit_scoring.md`, `fairness_audit.md`, `EDA.md`, `glossary.md`, `thesis-overview.md`). Keep them in sync when changing pipeline behaviour.
 
 `docs/decisions.md`, `docs/open-questions.md`, and `docs/experiments.md` are **gitignored internal docs** but exist locally — read `decisions.md` and `open-questions.md` before making architectural or methodological choices. Decision statuses: `open` → `accepted` → `closed`; never edit a `closed` row, and don't record decisions the user hasn't stated. When a decision is resolved, update both files together (see `.cursor/skills/sync-thesis-decisions/SKILL.md`).
 
