@@ -1,0 +1,23 @@
+src/fairness/gaps.py
+  s_a5bae274645f04::t_9839efe711e023 1-229
+tests/test_fairness_gaps.py
+  s_a5bae274645f04::t_104dd3fbe1a524 1-143
+.cursor/plans/fairness-audit.md
+  s_a5bae274645f04::t_289b4916ab9095 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "01d8af8257ef2faf787fc157b8eeceed91dcfe9f",
+  "prompts": {},
+  "sessions": {
+    "s_a5bae274645f04": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9511788b-6a45-422b-ad17-c7d7a812745a",
+        "model": "composer-2.5"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
