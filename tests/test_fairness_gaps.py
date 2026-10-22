@@ -8,49 +8,72 @@ import pytest
 from scipy.stats import chi2_contingency
 
 from src.fairness.config import default_fairness_config_path, load_audit_config
-from src.fairness.gaps import cell_summary, pair_gaps
+from src.fairness.gaps import LUM_SUMMARY_KEYS, cell_summary, pair_gaps
+from src.fairness.group_metrics import rate
 from src.fairness.thresholds import apply_threshold, base_rate_threshold
-from src.fairness.types import YHAT_COL, PairSpec
+from src.fairness.types import YHAT_COL, AuditConfig, PairSpec
+
+# Plan 5.7, F - M: (events, denominator) per side and metric.
+TOY_TABLES = {
+    "approval_rate": ((7, 10), (6, 10)),
+    "fpr": ((2, 8), (1, 6)),
+    "fnr": ((1, 2), (1, 4)),
+    "default_among_approved": ((1, 7), (1, 6)),
+}
+TOY_DIFFS = {
+    "approval_rate": 0.1,
+    "fpr": 1 / 12,
+    "fnr": 0.25,
+    "default_among_approved": 1 / 7 - 1 / 6,
+}
 
 
-def _one_pair_config() -> object:
+def _one_pair_config() -> AuditConfig:
     base = load_audit_config(default_fairness_config_path())
     fm = next(p for p in base.pairs if p.pair_id == "F-M")
-    return replace(
-        base,
-        pairs=[fm],
-        gap_metrics=["approval_rate", "fpr", "fnr"],
-        n_boot=50,
-    )
+    return replace(base, pairs=[fm], n_boot=50)
 
 
-def _scipy_g(table: np.ndarray) -> tuple:
+def _scipy_g(table: np.ndarray) -> float:
     arr = np.asarray(table, dtype=float)
     g, _, _, _ = chi2_contingency(arr, correction=False, lambda_="log-likelihood")
     return float(g)
 
 
+def _scipy_p(table: np.ndarray) -> float:
+    arr = np.asarray(table, dtype=float)
+    _, p, _, _ = chi2_contingency(arr, correction=False, lambda_="log-likelihood")
+    return float(p)
+
+
 def test_toy_gaps(toy_audit_frame) -> None:
     config = _one_pair_config()
     gaps = pair_gaps(toy_audit_frame, config)
-    row = gaps[gaps["metric"] == "approval_rate"].iloc[0]
-    assert row["diff"] == pytest.approx(0.1, rel=0, abs=1e-12)
-    assert row["ratio"] == pytest.approx(7 / 6, rel=0, abs=1e-12)
-    assert row["ratio_lower_over_higher"] == pytest.approx(6 / 7, rel=0, abs=1e-12)
-    fpr = gaps[gaps["metric"] == "fpr"].iloc[0]
-    assert fpr["diff"] == pytest.approx(0.0833333, rel=0, abs=1e-6)
-    fnr = gaps[gaps["metric"] == "fnr"].iloc[0]
-    assert fnr["diff"] == pytest.approx(0.25, rel=0, abs=1e-12)
+    assert list(gaps["metric"]) == list(TOY_TABLES)
+    z = config.z
 
-    for metric in ("approval_rate", "fpr", "fnr"):
-        g_row = gaps[gaps["metric"] == metric].iloc[0]
-        ev_a = int(g_row["rate_a"] * g_row["den_a"])
-        ev_b = int(g_row["rate_b"] * g_row["den_b"])
-        int_table = np.array(
-            [[ev_a, g_row["den_a"] - ev_a], [ev_b, g_row["den_b"] - ev_b]],
-            dtype=float,
-        )
-        assert g_row["g_stat"] == pytest.approx(_scipy_g(int_table), rel=0, abs=1e-9)
+    for metric, ((ev_a, den_a), (ev_b, den_b)) in TOY_TABLES.items():
+        row = gaps[gaps["metric"] == metric].iloc[0]
+        r_a, r_b = ev_a / den_a, ev_b / den_b
+        assert row["den_a"] == den_a and row["den_b"] == den_b
+        assert row["rate_a"] == pytest.approx(r_a, rel=0, abs=1e-12)
+        assert row["rate_b"] == pytest.approx(r_b, rel=0, abs=1e-12)
+        assert row["diff"] == pytest.approx(TOY_DIFFS[metric], rel=0, abs=1e-12)
+        se = np.sqrt(r_a * (1 - r_a) / den_a + r_b * (1 - r_b) / den_b)
+        diff = TOY_DIFFS[metric]
+        assert row["diff_ci_low"] == pytest.approx(diff - z * se, rel=0, abs=1e-12)
+        assert row["diff_ci_high"] == pytest.approx(diff + z * se, rel=0, abs=1e-12)
+
+        table = np.array([[ev_a, den_a - ev_a], [ev_b, den_b - ev_b]])
+        assert row["g_stat"] == pytest.approx(_scipy_g(table), rel=0, abs=1e-12)
+        assert row["df"] == 1
+        assert row["p_value"] == pytest.approx(_scipy_p(table), rel=0, abs=1e-12)
+
+    approval = gaps[gaps["metric"] == "approval_rate"].iloc[0]
+    se_approval = approval["diff"] - approval["diff_ci_low"]
+    assert se_approval == pytest.approx(z * np.sqrt(0.045), rel=0, abs=1e-12)
+    assert approval["ratio"] == pytest.approx(7 / 6, rel=0, abs=1e-12)
+    assert approval["ratio_lower_over_higher"] == pytest.approx(6 / 7, rel=0, abs=1e-12)
 
 
 def test_primary_flag(make_audit_frame) -> None:
@@ -117,16 +140,46 @@ def test_cell_summary(toy_audit_frame) -> None:
         rates = []
         for label in labels:
             mask = (toy_audit_frame["GENDER_AGE"] == label).to_numpy()
-            from src.fairness.group_metrics import rate as rate_fn
-
-            ev, den = rate_fn(y[mask], yhat[mask], metric)
+            ev, den = rate(y[mask], yhat[mask], metric)
             rates.append(ev / den if den else float("nan"))
+        assert row["k_groups"] == int(np.sum(~np.isnan(rates)))
         expected_gap = float(np.nanmax(rates) - np.nanmin(rates))
         assert row["max_min_gap"] == pytest.approx(expected_gap, rel=0, abs=1e-12)
         max_label = labels[int(np.nanargmax(rates))]
         min_label = labels[int(np.nanargmin(rates))]
         assert row["max_cell"] == max_label
         assert row["min_cell"] == min_label
+
+
+@pytest.mark.filterwarnings("error")
+def test_cell_summary_fewer_than_two_cells_is_nan() -> None:
+    config = replace(load_audit_config(default_fairness_config_path()), n_boot=20)
+    # No positives anywhere: fnr has 0 non-empty cells; one cell only: 1 non-empty.
+    frames = {
+        0: pd.DataFrame(
+            {
+                "y": np.zeros(8, dtype=np.int8),
+                YHAT_COL: np.array([0, 1] * 4, dtype=np.int8),
+                "GENDER_AGE": ["F | 20-29"] * 4 + ["M | 20-29"] * 4,
+            }
+        ),
+        1: pd.DataFrame(
+            {
+                "y": np.array([0, 1, 0, 1], dtype=np.int8),
+                YHAT_COL: np.array([0, 1, 1, 0], dtype=np.int8),
+                "GENDER_AGE": ["F | 30-39"] * 4,
+            }
+        ),
+    }
+    for n_active, frame in frames.items():
+        row = cell_summary(frame, config, "lgbm", 1).set_index("metric").loc["fnr"]
+        assert row["k_groups"] == n_active
+        for key in LUM_SUMMARY_KEYS:
+            assert np.isnan(row[key])
+        assert (
+            row["max_cell"] == row["min_cell"] == ("" if n_active == 0 else "F | 30-39")
+        )
+        assert row["df"] == 0
 
 
 def test_cell_g_test_df(make_audit_frame) -> None:
@@ -139,5 +192,11 @@ def test_cell_g_test_df(make_audit_frame) -> None:
         n_boot=30,
         cell_summary_metrics=["fpr"],
     )
+    y = frame["y"].to_numpy()
+    yhat = frame[YHAT_COL].to_numpy()
+    for label in config.groupings["GENDER_AGE"]:
+        mask = (frame["GENDER_AGE"] == label).to_numpy()
+        events, den = rate(y[mask], yhat[mask], "fpr")
+        assert 0 < events < den, label
     summary = cell_summary(frame, config, "lgbm", 1)
     assert summary.iloc[0]["df"] == 9

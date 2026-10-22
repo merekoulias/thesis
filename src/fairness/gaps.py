@@ -7,7 +7,23 @@ import pandas as pd
 
 from src.fairness.group_metrics import rate
 from src.fairness.stats import diff_ci, g_test, ratio_ci, seed_for, worst_group_summary
-from src.fairness.types import Y_COL, YHAT_COL, AuditConfig
+from src.fairness.types import GENDER_AGE_COL, Y_COL, YHAT_COL, AuditConfig
+
+RATIO_METRIC = "approval_rate"
+
+LUM_SUMMARY_KEYS: Tuple[str, ...] = (
+    "max_min_gap",
+    "max_min_ci_low",
+    "max_min_ci_high",
+    "var_uncorrected",
+    "var_single_corrected",
+    "var_double_corrected_ci_low",
+    "var_double_corrected_ci_high",
+    "sd_uncorrected",
+    "sd_single_corrected",
+    "sd_double_corrected_ci_low",
+    "sd_double_corrected_ci_high",
+)
 
 GAPS_COLUMNS: Tuple[str, ...] = (
     "pair_id",
@@ -114,7 +130,7 @@ def pair_gaps(frame: pd.DataFrame, config: AuditConfig) -> pd.DataFrame:
             g_stat, df, p_value = g_test(table)
 
             ratio = ratio_lo = ratio_hi = ratio_lower_over_higher = float("nan")
-            if metric == "approval_rate":
+            if metric == RATIO_METRIC:
                 ratio, ratio_lo, ratio_hi = ratio_ci(rate_a, den_a, rate_b, den_b, z)
                 if not np.isnan(ratio):
                     ratio_lower_over_higher = float(min(ratio, 1.0 / ratio))
@@ -153,7 +169,10 @@ def cell_summary(
     """Build ``cell_summary.csv`` for ``config.cell_summary_metrics`` over ``GENDER_AGE``.
 
     Per metric, rates are computed in each configured gender × age cell; Lum et al.
-    worst-group summary and a G-test on the 10 × 2 event tables follow.
+    worst-group summary and a G-test on the 10 × 2 event tables follow. Cells with
+    a zero denominator are left out of the summary; with fewer than two non-empty
+    cells every summary value is NaN (``max_cell``/``min_cell`` name the single
+    non-empty cell, or are empty).
 
     Args:
         frame: Audit frame with ``y``, ``yhat``, and ``GENDER_AGE``.
@@ -167,8 +186,8 @@ def cell_summary(
     y = frame[Y_COL].to_numpy()
     yhat = frame[YHAT_COL].to_numpy()
     alpha = 1.0 - config.confidence
-    cell_labels = config.groupings["GENDER_AGE"]
-    gender_age = frame["GENDER_AGE"].to_numpy()
+    cell_labels = config.groupings[GENDER_AGE_COL]
+    gender_age = frame[GENDER_AGE_COL].to_numpy()
     rows: List[Dict[str, Any]] = []
 
     for metric in config.cell_summary_metrics:
@@ -185,7 +204,7 @@ def cell_summary(
 
         w_seed = seed_for(config.seed, f"worst|{model}|{rank}|{metric}")
         active_idx = [i for i, d in enumerate(den_list) if d > 0]
-        if active_idx:
+        if len(active_idx) >= 2:
             w_den = [den_list[i] for i in active_idx]
             w_rate = [rate_list[i] for i in active_idx]
             summary = worst_group_summary(w_den, w_rate, config.n_boot, w_seed, alpha)
@@ -195,8 +214,11 @@ def cell_summary(
             max_cell = cell_labels[max_idx]
             min_cell = cell_labels[min_idx]
         else:
-            summary = worst_group_summary([0], [0.0], config.n_boot, w_seed, alpha)
-            max_cell = min_cell = ""
+            summary = {
+                "k_groups": len(active_idx),
+                **dict.fromkeys(LUM_SUMMARY_KEYS, float("nan")),
+            }
+            max_cell = min_cell = cell_labels[active_idx[0]] if active_idx else ""
 
         g_table = np.column_stack(
             [np.asarray(events_list, dtype=float), np.asarray(den_list) - events_list]
@@ -207,19 +229,9 @@ def cell_summary(
             {
                 "metric": metric,
                 "k_groups": summary["k_groups"],
-                "max_min_gap": summary["max_min_gap"],
-                "max_min_ci_low": summary["max_min_ci_low"],
-                "max_min_ci_high": summary["max_min_ci_high"],
+                **{key: summary[key] for key in LUM_SUMMARY_KEYS},
                 "max_cell": max_cell,
                 "min_cell": min_cell,
-                "var_uncorrected": summary["var_uncorrected"],
-                "var_single_corrected": summary["var_single_corrected"],
-                "var_double_corrected_ci_low": summary["var_double_corrected_ci_low"],
-                "var_double_corrected_ci_high": summary["var_double_corrected_ci_high"],
-                "sd_uncorrected": summary["sd_uncorrected"],
-                "sd_single_corrected": summary["sd_single_corrected"],
-                "sd_double_corrected_ci_low": summary["sd_double_corrected_ci_low"],
-                "sd_double_corrected_ci_high": summary["sd_double_corrected_ci_high"],
                 "g_stat": g_stat,
                 "df": df,
                 "p_value": p_value,
