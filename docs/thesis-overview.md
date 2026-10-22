@@ -51,7 +51,7 @@ Also monitor proxy features (region, occupation, income type) that may encode pr
 | EDA                 | `analysis/notebooks/` | Done   | Notebooks per table/domain; scripts/modules for shared helpers and heavy jobs. See notebook list in [decisions.md](decisions.md).          |
 | Feature engineering | `src/features/`       | Done   | Load → clean → aggregate → encode to model-ready matrices. See [feature_engineering.md](feature_engineering.md).                           |
 | Credit scoring      | `src/models/`         | TODO   | LightGBM 5-fold stratified CV with OOF predictions. See [credit_scoring.md](credit_scoring.md). More ML credit scoring models to be added. |
-| Fairness            | `src/fairness/`       | TODO   | Metrics and mitigation on OOF scores.                                                                                                      |
+| Fairness            | `src/fairness/`       | Baseline audit done (Step 6); mitigation TODO | OOF audit, tables and reports; see [fairness_audit.md](fairness_audit.md).                                                                 |
 
 
 **Not in scope:** model performance as a research question. Better predictive performance is nice-to-have, not a thesis target.

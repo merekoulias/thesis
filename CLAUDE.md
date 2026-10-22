@@ -30,6 +30,10 @@ python -m src.models.pipeline --features-dir artifacts/features --models-dir art
 
 # Execute an EDA notebook in place
 jupyter nbconvert --to notebook --execute --inplace analysis/notebooks/00_dataset_overview.ipynb
+
+# Baseline fairness audit (reads artifacts/runs/ + features + data/application_train.csv)
+python -m src.fairness.audit --all --overwrite
+python -m src.fairness.summary
 ```
 
 Style for `src/`: Black (88 cols), isort, Google-style docstrings, type hints on all public functions using `typing` (`Optional[X]`, not `X | None`), custom types in each package's `types.py`. No linter config is checked in.
@@ -46,7 +50,7 @@ Pipeline flow is `src/data/` → `src/features/` → `src/models/` → `src/fair
   4. `encoding.py`: missing indicators for high-missing numerics → median impute → one-hot **all** categoricals (no label encoding). Fit on train only; test uses `handle_unknown="ignore"`.
   Outputs: `X_train/X_test/y_train/ids_*/fairness_groups_*.parquet` + `metadata.json`.
 - **`src/models/`** — `io.load_training_data()` enforces the data contract (row alignment, unique IDs, no `TARGET` in `X`, finite numeric `X`, encoded protected columns present — it raises if they're missing). `training.train_lgbm_cv()` runs `StratifiedKFold` with per-fold early stopping, sanitizes feature names for LightGBM and maps importances back. No class weights/resampling, no tuning, no threshold. Outputs `oof_predictions.parquet` (`SK_ID_CURR`, `TARGET`, `y_pred_proba`, `fold`), `metrics.json`, ROC, fold models, importances. `X_test` is not used. Baseline OOF ROC AUC ≈ 0.784.
-- **`src/fairness/`** — **not yet implemented**. It should consume `artifacts/models/oof_predictions.parquet` + `artifacts/features/fairness_groups_train.parquet` (join on `SK_ID_CURR`). Planned metrics: demographic parity, equal opportunity, equalized odds, worst-group disparity over gender × 10-year age bands; one mitigation method per stage (exact methods TBD). Use OOF predictions and report cell counts per intersectional cell. Threshold selection belongs here: one group-blind threshold per model that flags the base-rate share (see `docs/decisions.md`).
+- **`src/fairness/`** — Baseline fairness audit (Phase 1, Step 6): consumes `artifacts/runs/<model>/<variant>/oof_predictions.parquet` (plus robustness ranks 2–5), `artifacts/features/fairness_groups_train.parquet`, and raw PTI from `data/application_train.csv`; writes CSV/JSON, figures and `report.md` under `artifacts/fairness/`. Cross-model summary via `python -m src.fairness.summary`. See `docs/fairness_audit.md`. Mitigation (`src/mitigation/`, re-audit on mitigation runs) is still TODO.
 - **`analysis/notebooks/`** — EDA notebooks `00`–`07` (one per table/domain, `07` = protected attributes/proxies) and `08_pre_modeling_bias_audit` (Phase 1, Step 5: data-level disparities, missingness and proxies; needs `artifacts/features/`). Out of scope there: credit-model training and fairness metrics on predictions. Notebook helpers (statistics, the auxiliary gender-predictability classifier) live in `analysis/helpers/`, not in `src/fairness/`. Notebooks resolve `data/` relative to the repo root. Consolidated findings in `docs/EDA.md`.
 - **`tests/`** — light contract tests on tiny in-memory fixtures (`tests/conftest.py::tiny_home_credit_data`): key integrity, output shapes, which columns go into `X`. Don't add tests that need the full CSVs.
 

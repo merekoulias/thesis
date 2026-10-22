@@ -149,12 +149,19 @@ From [experiments.md](experiments.md):
 
 ## Downstream: fairness
 
-The fairness layer (`src/fairness/`, not yet implemented) should consume:
+The baseline fairness audit is implemented in [`src/fairness/`](../src/fairness/). Full documentation: [fairness_audit.md](fairness_audit.md).
 
-- `artifacts/models/oof_predictions.parquet` — predicted probabilities
-- `artifacts/features/fairness_groups_train.parquet` — raw `CODE_GENDER` and `DAYS_BIRTH`, `AGE_BAND`, and `GENDER_AGE` labels
+It consumes, per model and variant:
 
-Join on `SK_ID_CURR` (not on row order), and check that no applicant is lost. Hard predictions are made in the fairness stage, not here: each model gets one group-blind threshold that flags the same share of applications as the base rate (8.07%), i.e. the `1 − base rate` quantile of its OOF scores. For this baseline that is `t ≈ 0.209`; `t = 0.5` would flag only 0.61%. See [decisions.md](decisions.md) (rows "Decision threshold", "Rate orientation").
+- `artifacts/runs/<model>/<variant>/oof_predictions.parquet` — OOF predicted probabilities (and robustness ranks 2–5 under `robustness/rank_*/`)
+- `artifacts/features/fairness_groups_train.parquet` — raw `CODE_GENDER`, `DAYS_BIRTH`, `AGE_BAND`, and `GENDER_AGE` labels
+
+Join on `SK_ID_CURR` (OOF row order is preserved). Hard predictions are made in the fairness stage: one group-blind threshold per model/rank at the `1 − base rate` quantile of OOF scores (8.07% flagged on full data). See [decisions.md](decisions.md) (rows "Decision threshold", "Rate orientation").
+
+```bash
+python -m src.fairness.audit --all --overwrite
+python -m src.fairness.summary
+```
 
 ---
 
