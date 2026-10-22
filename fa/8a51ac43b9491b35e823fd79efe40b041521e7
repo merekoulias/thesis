@@ -1,0 +1,35 @@
+configs/fairness.yaml
+  s_7dc8b3e78934c1::t_afacb27ef8ae85 32
+docs/fairness_audit.md
+  s_7dc8b3e78934c1::t_34c9c1236df2a3 112-121,178,200,211,217
+src/fairness/audit.py
+  s_7dc8b3e78934c1::t_e7a5349ded29ec 21,305-307,339
+src/fairness/comparison.py
+  s_7dc8b3e78934c1::t_2a763e117fd89a 1,22,59-77,285-363
+src/fairness/report.py
+  s_7dc8b3e78934c1::t_7a09cb6f24c5cd 23,37-43,55,308,386,593-625,779-784
+src/fairness/types.py
+  s_7dc8b3e78934c1::t_a406b3481cb540 45,61
+tests/test_fairness_audit.py
+  s_7dc8b3e78934c1::t_e90cf7196eeb62 45,171-172
+tests/test_fairness_comparison.py
+  s_7dc8b3e78934c1::t_9154de415d224a 13,140-176
+tests/test_fairness_gaps.py
+  s_7dc8b3e78934c1::t_8d999b50b114a6 22,29,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fa8a51ac43b9491b35e823fd79efe40b041521e7",
+  "prompts": {},
+  "sessions": {
+    "s_7dc8b3e78934c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "daadb234-c324-451d-87ee-e610370833cc",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
