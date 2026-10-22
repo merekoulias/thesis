@@ -18,11 +18,17 @@ from src.fairness.types import (
     YHAT_COL,
     AuditConfig,
     PairSpec,
+    pti_quintile_labels,
 )
 
 logger = logging.getLogger(__name__)
 
-RATIO_METRIC = "approval_rate"
+CDP_METRIC = "approval_rate"
+
+# Columns of ``gaps.csv`` read for the unconditional approval gap.
+GAP_PAIR_ID_COL = "pair_id"
+GAP_METRIC_COL = "metric"
+GAP_DIFF_COLUMNS: Tuple[str, str, str] = ("diff", "diff_ci_low", "diff_ci_high")
 
 CONDITIONAL_PARITY_COLUMNS: Tuple[str, ...] = (
     "pair_id",
@@ -66,15 +72,19 @@ def _pair_for_id(config: AuditConfig, pair_id: str) -> PairSpec:
 
 
 def _approval_rate(y: np.ndarray, yhat: np.ndarray) -> Tuple[float, int, int]:
-    events, denom = rate(y, yhat, RATIO_METRIC)
+    events, denom = rate(y, yhat, CDP_METRIC)
     if denom == 0:
         return float("nan"), events, denom
     return float(events / denom), events, denom
 
 
 def _check_pti_metadata(frame: pd.DataFrame, config: AuditConfig) -> int:
-    """Log warnings when PTI quintiles or missing count differ from config checks."""
-    n_missing = int(frame[PTI_COL].isna().sum())
+    """Log warnings when PTI quintiles or missing count differ from config checks.
+
+    Returns the number of rows without a PTI quintile (the rows excluded from the
+    conditional parity tables).
+    """
+    n_missing = int(frame[PTI_Q_COL].isna().sum())
     if n_missing != config.cdp_expected_missing:
         logger.warning(
             "PTI missing count %s != expected %s",
@@ -96,15 +106,14 @@ def _check_pti_metadata(frame: pd.DataFrame, config: AuditConfig) -> int:
 def _unconditional_approval_gap(
     gaps: pd.DataFrame, pair_id: str
 ) -> Tuple[float, float, float]:
-    row = gaps[(gaps["pair_id"] == pair_id) & (gaps["metric"] == RATIO_METRIC)]
+    row = gaps[
+        (gaps[GAP_PAIR_ID_COL] == pair_id) & (gaps[GAP_METRIC_COL] == CDP_METRIC)
+    ]
     if len(row) != 1:
-        raise ValueError(f"Missing approval_rate gap for pair {pair_id}")
+        raise ValueError(f"Missing {CDP_METRIC} gap for pair {pair_id}")
     r = row.iloc[0]
-    return (
-        float(r["diff"]),
-        float(r["diff_ci_low"]),
-        float(r["diff_ci_high"]),
-    )
+    diff_col, low_col, high_col = GAP_DIFF_COLUMNS
+    return float(r[diff_col]), float(r[low_col]), float(r[high_col])
 
 
 def conditional_parity(
@@ -129,7 +138,7 @@ def conditional_parity(
     yhat = work[YHAT_COL].to_numpy()
     pti_q = work[PTI_Q_COL].to_numpy()
     z = config.z
-    quintiles = [f"Q{i}" for i in range(1, config.cdp_n_quantiles + 1)]
+    quintiles = pti_quintile_labels(config.cdp_n_quantiles)
 
     parity_rows: List[Dict[str, Any]] = []
     test_rows: List[Dict[str, Any]] = []
@@ -210,7 +219,7 @@ def conditional_parity_cells(frame: pd.DataFrame, config: AuditConfig) -> pd.Dat
     cells = work[GENDER_AGE_COL].to_numpy()
     pti_q = work[PTI_Q_COL].to_numpy()
     z = config.z
-    quintiles = [f"Q{i}" for i in range(1, config.cdp_n_quantiles + 1)]
+    quintiles = pti_quintile_labels(config.cdp_n_quantiles)
     cell_labels = config.groupings[GENDER_AGE_COL]
     rows: List[Dict[str, Any]] = []
 
@@ -221,7 +230,7 @@ def conditional_parity_cells(frame: pd.DataFrame, config: AuditConfig) -> pd.Dat
             y_sub = y[mask]
             h_sub = yhat[mask]
             n = int(mask.sum())
-            events, denom = rate(y_sub, h_sub, RATIO_METRIC)
+            events, denom = rate(y_sub, h_sub, CDP_METRIC)
             appr, ci_lo, ci_hi = (
                 proportion_ci(events, denom, z)
                 if denom > 0

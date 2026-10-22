@@ -33,6 +33,18 @@ YHAT_COL = "yhat"
 OOF_COLUMNS: List[str] = ["SK_ID_CURR", "TARGET", "y_pred_proba", "fold"]
 
 
+def pti_quintile_labels(n_quantiles: int) -> List[str]:
+    """Return the ``PTI_Q`` labels ``Q1 .. Q<n_quantiles>`` in order.
+
+    Args:
+        n_quantiles: Number of PTI quantile bins.
+
+    Returns:
+        Ordered list of labels.
+    """
+    return [f"Q{i}" for i in range(1, n_quantiles + 1)]
+
+
 @dataclass(frozen=True)
 class MetricSpec:
     """Subpopulation, event, and denominator name for one rate metric.

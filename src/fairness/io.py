@@ -27,6 +27,7 @@ from src.fairness.types import (
     SCORE_COL,
     Y_COL,
     AuditConfig,
+    pti_quintile_labels,
 )
 from src.models.runs import load_oof
 
@@ -65,7 +66,7 @@ def assign_pti_quintiles(
     Returns:
         Tuple of label series (NaN where PTI is NaN) and inner cut points on known PTI.
     """
-    labels = [f"Q{i}" for i in range(1, n_quantiles + 1)]
+    labels = pti_quintile_labels(n_quantiles)
     out = pd.Series(np.nan, index=pti.index, dtype=object)
     known = pti.notna()
     if known.any():
