@@ -4,7 +4,8 @@ import re
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Set, Union
 
-from src.fairness.types import GROUPING_COLUMNS, METRIC_NAMES, AuditConfig, PairSpec
+from src.fairness.group_metrics import METRIC_SPECS
+from src.fairness.types import GROUPING_COLUMNS, AuditConfig, PairSpec
 from src.models.io import load_yaml_config
 
 PathLike = Union[str, Path]
@@ -120,7 +121,7 @@ def _validate_pair_labels(
 
 
 def _validate_metrics(metrics: List[str], path: Path, field_name: str) -> None:
-    allowed = set(METRIC_NAMES)
+    allowed = set(METRIC_SPECS)
     for name in metrics:
         if name not in allowed:
             raise ValueError(f"{path}: unknown metric {name!r} in {field_name}")
