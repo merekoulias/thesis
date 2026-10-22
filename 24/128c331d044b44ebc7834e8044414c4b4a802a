@@ -1,0 +1,37 @@
+.cursor/plans/multi-model-nested-cv.md
+  s_3a9a6afe819747::t_6d4d15a786d440 25,1670,1673
+CLAUDE.md
+  s_cf568e199fe3f0::t_c1c72fdbb981a4 22
+analysis/notebooks/00_dataset_overview.ipynb
+  s_cf568e199fe3f0::t_0135243ae91c0c 944
+requirements.txt
+  s_cf568e199fe3f0::t_e149067bdcf8a2 3,6
+src/README.md
+  s_cf568e199fe3f0::t_b1db9585b5047d 13,22,38
+src/models/__init__.py
+  s_cf568e199fe3f0::t_9fb68eeed7c40d 3-4,19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24128c331d044b44ebc7834e8044414c4b4a802a",
+  "prompts": {},
+  "sessions": {
+    "s_3a9a6afe819747": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1a774cd8-e689-4c96-b9c2-8b0b58aeb914",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    },
+    "s_cf568e199fe3f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "92f895f2-1739-427a-b80f-0cdf15eea560",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
