@@ -1,0 +1,37 @@
+.gitignore
+  s_0b8cb123e301a8::t_6d3faaab008c45 17-20
+tests/test_thesis_assets_build.py
+  s_0b8cb123e301a8::t_f703a213b4c8d6 1-189
+thesis_assets/README.md
+  s_0b8cb123e301a8::t_381a82ce63a419 1-47
+thesis_assets/__init__.py
+  s_0b8cb123e301a8::t_f98bb2e6da2abe 1
+thesis_assets/build.py
+  s_0b8cb123e301a8::t_813ad1119abb24 1-540
+thesis_assets/manifest.yaml
+  s_0b8cb123e301a8::t_d9c2aadbfa7c78 1-19
+thesis_assets/numbers.yaml
+  s_0b8cb123e301a8::t_ba172c633a4914 1-27
+thesis_assets/provenance.json
+  s_0b8cb123e301a8::t_39f6169d0e62d5 1
+thesis_assets/render/__init__.py
+  s_0b8cb123e301a8::t_f31b34e08d668f 1-6
+thesis_assets/types.py
+  s_0b8cb123e301a8::t_cbcaf10160d69c 1-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "12eed1db475805d1c12ac212c90ae55c57fd6799",
+  "prompts": {},
+  "sessions": {
+    "s_0b8cb123e301a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fb27b3b6-2af6-44e8-9ab0-0a25c7a8c184",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
