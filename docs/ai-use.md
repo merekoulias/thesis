@@ -1,0 +1,69 @@
+# AI use log
+
+What generative AI did in the thesis deliverables: the **code** (this repo), the **thesis text** (`text/` in the vault) and the **presentation**. This file is the source for the AI-use statement in the thesis. Check with the supervisor or department whether there is an official declaration template. As of 2026-11-21, `text/writting-rules.md` says nothing about AI.
+
+Keep it current: add a row whenever AI produces or changes something that ends up in a deliverable. Log one row per unit of work (a module or plan phase, a section, a slide), not one row per prompt.
+
+## 1. Tools
+
+| Tool | Model(s) | Used for | Period |
+|---|---|---|---|
+| Cursor (agent: Composer) | Composer (exact model not recorded) | Code: executing the phases of the implementation plans | 2026-10-21 – 2026-10-23 |
+| Claude Code | Claude Opus (version not recorded); Claude Sonnet 5.5 (one commit) | Code: phase reviews and review fixes | 2026-10-21 – 2026-10-23 |
+| Claude Code | Claude Opus 5.5 | Infrastructure for frozen thesis assets and this log | 2026-11-21 – |
+| Claude Code (`section-guide` skill) | Claude (version not recorded) | Thesis text: section plans and reviews of the user's drafts (does not write the text) | 2026-11-17 – |
+| _TODO_ | | | |
+
+## 2. Ground rules
+
+These are the rules that applied to AI output. They are enforced through `CLAUDE.md`, `.cursor/rules/` and `.claude/skills/`.
+
+- The author sets every methodological decision (`docs/decisions.md`). AI does not record decisions the author has not stated.
+- AI never invents references. The text cites only sources in the vault's `bibliography/`, and anything missing becomes a `[TODO: source]`.
+- Every number in the text comes from `artifacts/`, the notebooks or the writing notes, never from a model's memory (`.cursor/rules/thesis-writing.mdc`). Key numbers are registered in `thesis_assets/numbers.yaml`.
+- Sections the author writes are guided, not written, by AI (`section-guide` skill).
+- Code produced by AI passes the repo's tests and a separate review before it is accepted. The author reviews all of it and is responsible for all of it.
+
+## 3. Log
+
+**AI role** (what the AI did): `generated` (wrote it from a spec) · `co-written` (AI and author both wrote substantial parts) · `edited` (language, style or formatting changes to the author's work) · `reviewed` (feedback or a verdict only, no changes) · `fixed` (applied changes after a review) · `planned` (outline or plan, no final content) · `research` (summaries of sources, look-ups) · `explained`.
+**Extent:** `none` · `minor` · `substantial` · `all`.
+**Evidence:** a commit, a plan, a file or a chat. Commits made by an agent carry a `Co-authored-by:` trailer (`git log --format='%h %s %(trailers:key=Co-Authored-By,valueonly)'`).
+
+### 3.1 Code (this repo)
+
+| Date | Location | Tool / model | AI role | Author's role | Extent | Evidence |
+|---|---|---|---|---|---|---|
+| 2025-10 – 2026-09 | `analysis/`, `src/data/`, `src/features/`, first LightGBM model, EDA notebooks, `.cursor/rules/`, `CLAUDE.md` | _TODO_ | _TODO_ | _TODO_ | _TODO_ | No `Co-authored-by` trailers on these commits. **Author to fill in.** |
+| 2026-10-21 | `.cursor/plans/multi-model-nested-cv.md` (implementation plan) | _TODO_ | _TODO_ | _TODO_ | _TODO_ | `03a9797` |
+| 2026-10-21 – 22 | `src/models/` (nested-CV credit scorers), its tests and configs: plan phases 0–9 | Cursor Composer | generated | wrote the plan, ran each phase, accepted it after review | substantial | Commits `models: phase N` with the trailer `Co-authored-by: Cursor`; plan header "Executor: Cursor Composer" |
+| 2026-10-21 – 22 | `src/models/`: review of each phase and fixes to its findings | Claude Code (Opus) | reviewed, fixed | decided on the verdicts | substantial | Plan progress log ("Review verdict"); commits between phases (`Enhance …`, `Refine …`, `Update phase N status …`) |
+| 2026-10-22 | `.cursor/plans/fairness-audit.md` (implementation plan) | _TODO_ | _TODO_ | _TODO_ | _TODO_ | `a9eac5a`, `51e7a26` |
+| 2026-10-22 – 23 | `src/fairness/` (baseline fairness audit), its tests, `configs/fairness.yaml`, `docs/fairness_audit.md`: plan phases 0–9 | Cursor Composer | generated | wrote the plan, ran each phase, accepted it after review | substantial | Commits `fairness: phase N` with the trailer `Co-authored-by: Cursor` |
+| 2026-10-22 – 23 | `src/fairness/`: review of each phase and fixes to its findings | Claude Code (Opus); Claude Sonnet 5.5 for `725fd17` | reviewed, fixed | decided on the verdicts | substantial | Plan progress log ("fixed by the reviewer"); `725fd17` (trailer `Claude Sonnet 5.5`); commits between phases |
+| 2026-11-21 | `thesis_assets/` (build/check script, manifest, numbers register, README), `tests/test_thesis_assets_build.py`, `docs/ai-use.md`, `.gitignore`, `CLAUDE.md` | Claude Code (Opus 5.5) | generated | asked for and specified the structure; reviews it | all | This session |
+
+### 3.2 Thesis text (vault `text/`)
+
+| Date | Chapter / section | Tool / model | AI role | Author's role | Extent | Evidence |
+|---|---|---|---|---|---|---|
+| 2026-11-17 | Ch. 2 (plan for the whole chapter) | Claude Code, `section-guide` | planned | will write the text | none in the text so far | `text/guides/2-credit-scoring-and-ml.md` |
+| _TODO_ | `3-fairness-in-ML.docx` | _TODO_ | _TODO_ | _TODO_ | _TODO_ | **Author to fill in.** |
+
+### 3.3 Presentation
+
+| Date | Slide(s) | Tool / model | AI role | Author's role | Extent | Evidence |
+|---|---|---|---|---|---|---|
+| | | | | | | |
+
+### 3.4 Research support (not a deliverable, but it feeds the text)
+
+| Date | What | Tool / model | AI role | Author's role | Evidence |
+|---|---|---|---|---|---|
+| 2026-10 – | Paper and directive notes in the vault (`bibliography/papers-notes/`, `directive-notes/`): summaries and answers to phase questions, each with a section/page and a quote | Claude Code | research | chose the papers and the questions | Note template `bibliography/papers-notes/_template.md` |
+| _TODO_ | | | | | |
+
+## 4. Open items for the author
+
+- Fill in the `_TODO_` rows: code before 2026-10-21, both implementation plans, `3-fairness-in-ML.docx`, and any other tool (ChatGPT, Copilot, translation tools).
+- Ask the supervisor or department whether an AI-use declaration is required and in what form.

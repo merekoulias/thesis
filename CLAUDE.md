@@ -35,6 +35,10 @@ jupyter nbconvert --to notebook --execute --inplace analysis/notebooks/00_datase
 # Baseline fairness audit (reads artifacts/runs/ + features + data/application_train.csv)
 python -m src.fairness.audit --all --overwrite
 python -m src.fairness.summary
+
+# Frozen thesis tables/figures (thesis_assets/): build from artifacts/, or check for stale/missing/orphan assets
+python -m thesis_assets.build [--only ID ...]
+python -m thesis_assets.build --check
 ```
 
 Style for `src/`: Black (88 cols), isort, Google-style docstrings, type hints on all public functions using `typing` (`Optional[X]`, not `X | None`), custom types in each package's `types.py`. No linter config is checked in.
@@ -53,17 +57,26 @@ Pipeline flow is `src/data/` → `src/features/` → `src/models/` → `src/fair
 - **`src/models/`** — `io.load_training_data()` enforces the data contract (row alignment, unique IDs, no `TARGET` in `X`, finite numeric `X`, encoded protected columns present — it raises if they're missing). `training.train_lgbm_cv()` runs `StratifiedKFold` with per-fold early stopping, sanitizes feature names for LightGBM and maps importances back. No class weights/resampling, no tuning, no threshold. Outputs `oof_predictions.parquet` (`SK_ID_CURR`, `TARGET`, `y_pred_proba`, `fold`), `metrics.json`, ROC, fold models, importances. `X_test` is not used. Baseline OOF ROC AUC ≈ 0.784.
 - **`src/fairness/`** — Baseline fairness audit (Phase 1, Step 6): consumes `artifacts/runs/<model>/<variant>/oof_predictions.parquet` (plus robustness ranks 2–5), `artifacts/features/fairness_groups_train.parquet`, and raw PTI from `data/application_train.csv`; writes CSV/JSON, figures and `report.md` under `artifacts/fairness/`. One group-blind threshold per model and robustness rank that flags the base-rate share (`thresholds.py`); rates, gaps and counts (n, positives, negatives, flagged) are reported for every gender × age cell. Cross-model summary via `python -m src.fairness.summary`. See `docs/fairness_audit.md`. Mitigation (`src/mitigation/`, re-audit on mitigation runs) is still TODO.
 - **`analysis/notebooks/`** — EDA notebooks `00`–`07` (one per table/domain, `07` = protected attributes/proxies) and `08_pre_modeling_bias_audit` (Phase 1, Step 5: data-level disparities, missingness and proxies; needs `artifacts/features/`). Out of scope there: credit-model training and fairness metrics on predictions. Notebook helpers (statistics, the auxiliary gender-predictability classifier) live in `analysis/helpers/`, not in `src/fairness/`. Notebooks resolve `data/` relative to the repo root. Consolidated findings in `docs/EDA.md`.
+- **`thesis_assets/`** (tracked, unlike `artifacts/`) — frozen copies of every table and figure used in the thesis or the presentation. `manifest.yaml` has one entry per asset (stable slug id, chapter, Greek caption, `used_in`, source: `copy` an artifact or `render` with a function in `thesis_assets/render/`). `numbers.yaml` registers key in-text numbers against their artifact. `build.py` writes `figures/`, `tables/` and `provenance.json` (commit plus input/output hashes), and `--check` flags stale or hand-edited assets and mismatched numbers. See `thesis_assets/README.md`.
 - **`tests/`** — light contract tests on tiny in-memory fixtures (`tests/conftest.py::tiny_home_credit_data`): key integrity, output shapes, which columns go into `X`. Don't add tests that need the full CSVs.
 
 Home Credit tables are large (millions of rows in `bureau_balance`, `installments_payments`, etc.): prefer vectorized pandas, avoid unnecessary copies, free big intermediates.
 
 ## Docs and decisions
 
-Detailed write-ups live in `docs/` (`feature_engineering.md`, `child_tables_aggregation.md`, `encoding.md`, `credit_scoring.md`, `fairness_audit.md`, `EDA.md`, `glossary.md`, `thesis-overview.md`). Keep them in sync when changing pipeline behaviour.
+Detailed write-ups live in `docs/` (`feature_engineering.md`, `child_tables_aggregation.md`, `encoding.md`, `credit_scoring.md`, `fairness_audit.md`, `EDA.md`, `glossary.md`, `thesis-overview.md`, `ai-use.md`). Keep them in sync when changing pipeline behaviour.
 
 `docs/decisions.md`, `docs/open-questions.md`, and `docs/experiments.md` are **gitignored internal docs** but exist locally — read `decisions.md` and `open-questions.md` before making architectural or methodological choices. Decision statuses: `open` → `accepted` → `closed`; never edit a `closed` row, and don't record decisions the user hasn't stated. When a decision is resolved, update both files together (see `.cursor/skills/sync-thesis-decisions/SKILL.md`).
 
 Cursor rules in `.cursor/rules/` (`thesis-context.mdc`, `python-src.mdc`, `python-data-analyst.mdc`) and skills in `.cursor/skills/` carry the same conventions; the EDA notebook skill defines the required section baseline for notebooks `02`–`06` and forbids absolute local paths in notebook content.
+
+## Writing the thesis text
+
+Before drafting, editing or reviewing any thesis chapter, read and follow `.cursor/rules/thesis-writing.mdc`. In particular, cite sources by their full title in square brackets (`[Title]`) until the user says the thesis is finished. For sections the user writes themselves, guide rather than write: use the `section-guide` skill (`.claude/skills/section-guide/`), which plans the section and reviews the user's draft, and records what it learns in its `learnings.md`.
+
+## Deliverable bookkeeping
+
+Whenever you touch a deliverable (code, thesis text or presentation), you must update `thesis_assets/manifest.yaml` (and `numbers.yaml`, then rebuild) for any table, figure or key number you add, change, move or remove in the thesis or slides, and add or extend a row in `docs/ai-use.md` describing what you did (location, tool/model, AI role, extent, evidence).
 
 ## Thesis notes (Obsidian vault)
 
@@ -74,3 +87,4 @@ Research and writing notes live outside the repo in an Obsidian vault at `/Users
 - `Notes/mitigation/` — detailed notes on bibliography sections about bias mitigation (pre-, in-, post-processing).
 - `Notes/phases/` — the phases of the thesis implementation.
 - `Notes/writing-notes/` — notes and decisions written while working through the phases and the bibliography; these are later turned into the thesis text.
+- `text/` — the thesis text itself (Greek chapters), plus `structure.md` (chapter outline), `writing-guide.md` (the story and writing checklist) and `writting-rules.md` (department formatting rules).

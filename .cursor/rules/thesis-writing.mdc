@@ -1,0 +1,77 @@
+---
+description: Rules for drafting or editing the written thesis text (Greek chapters in the Obsidian vault under 1-Projects/Uni/thesis/text/)
+alwaysApply: false
+---
+
+# Thesis writing rules
+
+Apply these rules whenever you draft, edit or review text for the written thesis. The chapters live in the vault at `/Users/c4t/c4t-vault/1-Projects/Uni/thesis/text/` (`.docx` / `.md`). Read these files first:
+
+- `text/structure.md`: the chapter outline (which chapter answers which RQ)
+- `text/writing-guide.md`: the story the thesis tells and how each chapter carries it
+- `text/writting-rules.md`: the department's formatting rules
+
+The thesis is written in **Greek**. These rules are in English, like the rest of the repo.
+
+## 1. Citations: full title in square brackets
+
+- Cite every source **by its full title in square brackets**, not by number or author–year: `[Equality of Opportunity in Supervised Learning]`.
+- Take the title **exactly** from the source's note in the vault (`bibliography/papers-notes/`, `books-notes/`, `article-notes/`, `directive-notes/`). For papers, use the `title` field in the note's frontmatter. For a source without a `title` field, use its official title. Keep the title in its original language (do not translate it into Greek), with the same spelling and punctuation every time, so the titles can later be replaced mechanically.
+- Several sources: `[Title A], [Title B]`.
+- **Do not replace titles with numbers** until the user says the thesis is finished. Then switch to IEEE numbering in order of first citation, and build the bibliography from the same titles.
+- Cite only sources that are in the vault's `bibliography/`. If a claim needs a source that isn't there, write `[TODO: source for <claim>]` and tell the user. Never invent a reference.
+- Every source in the bibliography must be cited in the text (department rule).
+
+## 2. Never invent content
+
+- Take every number from `artifacts/` (e.g. `artifacts/fairness/summary_baseline/`, `artifacts/runs/summary_baseline.csv`), the notebooks or the Phase writing notes (`Notes/writing-notes/`). Never type a number from memory.
+- Methodological choices come from `docs/decisions.md` (`accepted` / `closed` rows). Do not state a decision the user hasn't made. If something is still open (`docs/open-questions.md`), write `[TODO: ...]` instead of picking an answer.
+- Mark every gap with a visible `[TODO: ...]` and list the TODOs in your reply.
+
+## 3. Every section serves a research question
+
+- Know which RQ (RQ1 detection, RQ2 mitigation, RQ3 intersectionality) each section serves, using `text/structure.md`. If a paragraph serves none, leave it out or propose moving it to an appendix.
+- **Open** each chapter with the question it answers. **Close** it with the answer and what the next chapter takes from it.
+
+## 4. Claim discipline
+
+- Describe **gaps / disparities** and **associations**. Do not claim discrimination or causes ("caused by") from observational results.
+- Never call a model "fair" without saying which criterion and threshold: "fair under criterion X at threshold t".
+- The data does not prove historical bias; state what a result does and does not show.
+- Framing: the disadvantaged groups here are men and young applicants. Present the thesis as "fairness depends on the question asked, and here is a careful way to measure it", not as "the model discriminates against group X".
+
+## 5. Reporting numbers
+
+- With every gap, report the group values, the **signed gap with a fixed orientation** (e.g. women − men), its **95% interval**, the **base rate** and the **threshold** it was computed at.
+- Use one orientation everywhere: approval rates (`Ŷ = 0`), as in `docs/decisions.md`. Effect size comes first; p-values come after it.
+- Lead with the two pre-chosen primary gaps (FPR gap = EOD, FNR gap). Everything else is supporting evidence.
+
+## 6. Justify every decision
+
+For each methodological choice, state the choice, the reason, the rejected alternative and a citation, following the shape of the `docs/decisions.md` rows.
+
+## 7. Notation and terminology are fixed
+
+- Use one notation everywhere: X, A, G, Y, R, Ŷ, t (see `Notes/writing-notes/phase-1/2-mathematical-setup.md`). X, Y, R, t and Ŷ are defined in Chapter 2, A and G in Chapter 3. Chapter 5.2 applies them to Home Credit and does not redefine them. A is a protected attribute (A_sex, A_age); G is the grouping variable an audit runs on (A_sex, A_age or the gender × age cell), with values g. Do not use S. Do not introduce new symbols for existing quantities.
+- One Greek term per concept. Look terms up in `text/glossary.md` and use the entry. If a concept has no entry, choose a Greek term, give the English in parentheses at first use in each chapter, and add the pair to `text/glossary.md` (create the file if missing). Mention new glossary entries in your reply.
+
+## 8. Figures, tables and formatting
+
+- Every figure and table has a caption and is referenced at least once in the text. The text says what the reader should see in it, not only that it exists.
+- Follow `text/writting-rules.md` (A4, margins of at least 1.5 cm, Calibri / Times New Roman, at least 11 pt, clear high-quality figures).
+
+## 9. Results versus interpretation
+
+Results sections state what was found. Interpretation goes in the closing part of each chapter and in the Discussion chapter.
+
+## 10. Audience
+
+Write for an examiner who knows ML but not fairness metrics or the Home Credit dataset. Define fairness terms at first use and explain dataset oddities (e.g. the `DAYS_EMPLOYED` sentinel, `TARGET` existing only for granted loans).
+
+## 11. Leave room for mitigation
+
+Do not write conclusions in the data and baseline chapters (6–7) that pre-empt the mitigation chapters (8–9). Chapter 7 ends with the baseline numbers to beat.
+
+## 12. Write Greek natively
+
+When working from the English notes, write fresh Greek prose. Do not translate sentence by sentence.
