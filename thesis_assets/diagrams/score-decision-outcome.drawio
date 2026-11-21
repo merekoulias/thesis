@@ -1,0 +1,59 @@
+<mxfile host="drawio">
+  <diagram id="score-decision-outcome" name="score-decision-outcome">
+    <mxGraphModel grid="0" gridSize="5" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="features" value="Μεταβλητές&#xa;εισόδου X" style="rounded=0;whiteSpace=nowrap;html=0;fillColor=#FFFFFF;strokeColor=#000000;fontColor=#000000;fontFamily=Times New Roman;fontSize=14.67;" vertex="1" parent="1">
+          <mxGeometry x="0" y="75" width="95" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="model" value="Μοντέλο" style="rounded=0;whiteSpace=nowrap;html=0;fillColor=#FFFFFF;strokeColor=#000000;fontColor=#000000;fontFamily=Times New Roman;fontSize=14.67;" vertex="1" parent="1">
+          <mxGeometry x="115" y="75" width="75" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="score" value="Βαθμολογία&#xa;κινδύνου&#xa;R ∈ [0, 1]" style="rounded=0;whiteSpace=nowrap;html=0;fillColor=#FFFFFF;strokeColor=#000000;fontColor=#000000;fontFamily=Times New Roman;fontSize=14.67;" vertex="1" parent="1">
+          <mxGeometry x="210" y="75" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="rule" value="R &gt; t" style="rhombus;whiteSpace=nowrap;html=0;fillColor=#FFFFFF;strokeColor=#000000;fontColor=#000000;fontFamily=Times New Roman;fontSize=14.67;" vertex="1" parent="1">
+          <mxGeometry x="330" y="75" width="80" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="refuse" value="Απόρριψη&#xa;(Ŷ = 1)" style="rounded=0;whiteSpace=nowrap;html=0;fillColor=#FFFFFF;strokeColor=#000000;fontColor=#000000;fontFamily=Times New Roman;fontSize=14.67;" vertex="1" parent="1">
+          <mxGeometry x="325" y="0" width="90" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="grant" value="Έγκριση&#xa;(Ŷ = 0)" style="rounded=0;whiteSpace=nowrap;html=0;fillColor=#FFFFFF;strokeColor=#000000;fontColor=#000000;fontFamily=Times New Roman;fontSize=14.67;" vertex="1" parent="1">
+          <mxGeometry x="325" y="165" width="90" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="unobserved" value="Έκβαση Y&#xa;δεν παρατηρείται" style="rounded=0;whiteSpace=nowrap;html=0;dashed=1;fillColor=#FFFFFF;strokeColor=#000000;fontColor=#000000;fontFamily=Times New Roman;fontSize=14.67;" vertex="1" parent="1">
+          <mxGeometry x="440" y="0" width="145" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="observed" value="Έκβαση Y&#xa;παρατηρείται&#xa;(Y = 1: δυσκολίες&#xa;αποπληρωμής)" style="rounded=0;whiteSpace=nowrap;html=0;fillColor=#FFFFFF;strokeColor=#000000;fontColor=#000000;fontFamily=Times New Roman;fontSize=14.67;" vertex="1" parent="1">
+          <mxGeometry x="440" y="150" width="145" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e-features-model" style="endArrow=block;endFill=1;endSize=6;html=0;strokeColor=#000000;" edge="1" parent="1" source="features" target="model">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-model-score" style="endArrow=block;endFill=1;endSize=6;html=0;strokeColor=#000000;" edge="1" parent="1" source="model" target="score">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-score-rule" style="endArrow=block;endFill=1;endSize=6;html=0;strokeColor=#000000;" edge="1" parent="1" source="score" target="rule">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-rule-refuse" value="Ναι" style="endArrow=block;endFill=1;endSize=6;html=0;strokeColor=#000000;fontColor=#000000;fontFamily=Times New Roman;fontSize=14.67;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="rule" target="refuse">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="16" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-rule-grant" value="Όχι" style="endArrow=block;endFill=1;endSize=6;html=0;strokeColor=#000000;fontColor=#000000;fontFamily=Times New Roman;fontSize=14.67;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="rule" target="grant">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="16" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-refuse-unobserved" style="endArrow=block;endFill=1;endSize=6;html=0;dashed=1;strokeColor=#000000;" edge="1" parent="1" source="refuse" target="unobserved">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-grant-observed" style="endArrow=block;endFill=1;endSize=6;html=0;strokeColor=#000000;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="grant" target="observed">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -89,6 +89,7 @@ def test_render_writes_under_id_and_removes_old_formats(
         return paths
 
     monkeypatch.setattr(tab, "_resolve_render", lambda target: fake_render)
+    monkeypatch.setattr(tab, "_render_code_files", lambda target, root: [])
     repo = _setup(
         tmp_path,
         [_asset(source={"render": "x:y", "inputs": ["artifacts/metrics.json"]})],
@@ -110,6 +111,7 @@ def test_render_outside_its_stem_is_rejected(
         return [other]
 
     monkeypatch.setattr(tab, "_resolve_render", lambda target: bad_render)
+    monkeypatch.setattr(tab, "_render_code_files", lambda target, root: [])
     repo = _setup(tmp_path, [_asset(source={"render": "x:y"})])
     with pytest.raises(ValueError, match="expected"):
         _build(repo)
@@ -126,12 +128,60 @@ def test_render_outside_its_stem_is_rejected(
         [_asset(source={"copy": "a", "render": "m:f"})],
         [_asset(source={})],
         [_asset(extra=1)],
+        [_asset(kind="diagram")],
+        [_asset(source={"drawio": "thesis_assets/diagrams/a.drawio"})],
+        [_asset(kind="diagram", source={"drawio": "a.svg"})],
     ],
 )
 def test_manifest_validation(tmp_path: Path, bad: List[dict]) -> None:
     repo = _setup(tmp_path, bad)
     with pytest.raises(ValueError):
         tab.load_manifest(repo / "thesis_assets" / "manifest.yaml")
+
+
+def test_drawio_source_is_hashed_and_orphan_diagrams_flagged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fake_export(src: Path, out_stem: Path) -> List[Path]:
+        out = out_stem.with_suffix(".svg")
+        out.write_text(src.read_text())
+        return [out]
+
+    monkeypatch.setattr(tab, "export_drawio", fake_export)
+    drawio = "thesis_assets/diagrams/flow.drawio"
+    repo = _setup(
+        tmp_path, [_asset(id="flow", kind="diagram", source={"drawio": drawio})]
+    )
+    (repo / "thesis_assets" / "diagrams").mkdir()
+    (repo / drawio).write_text("<mxfile/>")
+    _build(repo)
+    assert (repo / "thesis_assets" / "figures" / "flow.svg").is_file()
+    assert _check(repo).errors == []
+    (repo / drawio).write_text("<mxfile>edited</mxfile>")
+    (repo / "thesis_assets" / "diagrams" / "old.drawio").write_text("<mxfile/>")
+    errors = " | ".join(_check(repo).errors)
+    assert "stale, input thesis_assets/diagrams/flow.drawio changed" in errors
+    assert "orphan diagram thesis_assets/diagrams/old.drawio" in errors
+
+
+def test_render_code_files_include_module_and_style() -> None:
+    files = tab._render_code_files(
+        "thesis_assets.render.ch2:roc_illustration", tab.REPO_ROOT
+    )
+    assert [f.name for f in files] == ["ch2.py", "style.py"]
+
+
+def test_greek_number_and_figure_width(tmp_path: Path) -> None:
+    import matplotlib.pyplot as plt
+
+    from thesis_assets.render.style import cm, greek_number, save_figure
+
+    assert greek_number(-0.25, 2) == "\u22120,25"
+    assert greek_number(1, 1) == "1,0"
+    fig = plt.figure(figsize=(cm(17.0), cm(5.0)))
+    with pytest.raises(ValueError, match="max 16.0 cm"):
+        save_figure(fig, tmp_path / "too-wide")
+    plt.close(fig)
 
 
 def _number(**overrides: object) -> dict:
@@ -187,3 +237,15 @@ def test_number_validation(tmp_path: Path) -> None:
 def test_repo_manifest_and_numbers_are_valid() -> None:
     tab.load_manifest(tab.ASSETS_DIR / tab.MANIFEST_FILE)
     tab.load_numbers(tab.ASSETS_DIR / tab.NUMBERS_FILE)
+
+
+def test_save_table_writes_exact_csv_and_greek_html(tmp_path: Path) -> None:
+    import pandas as pd
+
+    from thesis_assets.render.style import save_table
+
+    table = pd.DataFrame({"Μοντέλο": ["LR", "GBDT"], "AUC": [0.776699, 0.786206]})
+    csv_path, html_path = save_table(table, tmp_path / "auc", decimals=3)
+    assert pd.read_csv(csv_path)["AUC"].tolist() == [0.776699, 0.786206]
+    html = html_path.read_text(encoding="utf-8")
+    assert "0,777" in html and "0,786" in html and "Times New Roman" in html

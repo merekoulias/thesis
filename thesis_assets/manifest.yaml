@@ -5,15 +5,46 @@
 # Example entry (copy, then edit):
 #
 #   - id: primary-gaps-baseline          # stable slug = file-name stem; never a number
-#     kind: figure                       # figure | table
+#     kind: figure                       # figure | diagram | table
 #     chapter: "6.2"                     # where it appears now; update when it moves
-#     caption: "Σχήμα: Κύριες διαφορές ..."  # caption exactly as in the thesis
+#     caption: "Κύριες διαφορές ..."     # caption text as in Word, without "Σχήμα N:"
 #     used_in: [thesis, slides]          # thesis | slides
 #     source:
 #       copy: artifacts/fairness/summary_baseline/figures/primary_gaps.png
 #       # or: render: thesis_assets.render.ch6:primary_gaps_baseline
+#       # or (kind: diagram only): drawio: thesis_assets/diagrams/<id>.drawio
 #       inputs: []                       # extra files the asset is computed from
 #       producer: "python -m src.fairness.summary"
 #     notes: ""
 
-assets: []
+assets:
+  - id: score-decision-outcome
+    kind: diagram
+    chapter: "2.1"
+    caption: >-
+      Από τη βαθμολογία κινδύνου στην απόφαση πίστωσης. Το μοντέλο αντιστοιχίζει
+      τις μεταβλητές εισόδου X σε βαθμολογία κινδύνου R· η απόφαση Ŷ προκύπτει από
+      τη σύγκριση της R με το κατώφλι t. Η έκβαση Y παρατηρείται μόνο για τις
+      αιτήσεις που εγκρίνονται· για όσες απορρίπτονται μένει άγνωστη (διακεκομμένη
+      γραμμή).
+    used_in: [thesis]
+    source:
+      drawio: thesis_assets/diagrams/score-decision-outcome.drawio
+    notes: Ch. 2 guide Fig. 2.1, referenced in ¶4 and ¶5. Conceptual, no data.
+
+  - id: roc-illustration
+    kind: figure
+    chapter: "2.3"
+    caption: >-
+      Ενδεικτική καμπύλη ROC (υποθετικά δεδομένα, AUC ≈ 0,80). Κάθε σημείο της
+      καμπύλης αντιστοιχεί σε ένα κατώφλι t· όσο αυξάνεται το t, απορρίπτονται
+      λιγότεροι αιτούντες και το σημείο κινείται προς το (0, 0). Η σκιασμένη περιοχή
+      είναι η AUC· η διακεκομμένη διαγώνιος αντιστοιχεί σε τυχαία ταξινόμηση.
+    used_in: [thesis]
+    source:
+      render: thesis_assets.render.ch2:roc_illustration
+      inputs: []
+    notes: >-
+      Ch. 2 guide Fig. 2.2, referenced in ¶13. Illustrative, reads no data:
+      binormal TPR = Φ(a + Φ⁻¹(FPR)), a = 1.19, AUC = Φ(a/√2) ≈ 0.80. Not the
+      thesis's own ROC (that is a Ch. 7 result).

@@ -1,1 +1,27 @@
-{}
+{
+  "roc-illustration": {
+    "built_at": "2026-11-21T14:51:25+00:00",
+    "git_commit": "12eed1db475805d1c12ac212c90ae55c57fd6799",
+    "git_dirty": true,
+    "inputs": {
+      "thesis_assets/render/ch2.py": "edf8ce887c90313c0b00b72f7d978a812e64cb2f7a36af459faef69237aad2f3",
+      "thesis_assets/render/style.py": "fec40f06bae1313eef9c3792194d2efd1825875f743edbdf5a71966d04d78fda"
+    },
+    "outputs": {
+      "thesis_assets/figures/roc-illustration.png": "232778462b24026d5409ffa08dfa6d9a9be98bd7ce0e7858efead6862d2f3521",
+      "thesis_assets/figures/roc-illustration.svg": "18590cdd0cacde8253193cb52eb9d8903b9458688da774c9659a925ee5683670"
+    }
+  },
+  "score-decision-outcome": {
+    "built_at": "2026-11-21T14:51:06+00:00",
+    "git_commit": "12eed1db475805d1c12ac212c90ae55c57fd6799",
+    "git_dirty": true,
+    "inputs": {
+      "thesis_assets/diagrams/score-decision-outcome.drawio": "926e754547f7f1582f47fa226ae80fc88afec8c341a08ce5378f9d4ceec47a78"
+    },
+    "outputs": {
+      "thesis_assets/figures/score-decision-outcome.png": "62b5f67908e785891416671c16b33d2c1b03760fa2c31ec69a724dadd59c545f",
+      "thesis_assets/figures/score-decision-outcome.svg": "8b48cf1b04e818650f967ced1bf58fa9f5c42539d640ab3b7ced3cbecb6ec460"
+    }
+  }
+}

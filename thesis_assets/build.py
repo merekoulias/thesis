@@ -1,7 +1,8 @@
 """Build, freeze and check the tables and figures used in the thesis.
 
-Every asset in ``thesis_assets/manifest.yaml`` is either copied from a pipeline
-artifact or rendered by a ``module:function``. The output is written to
+Every asset in ``thesis_assets/manifest.yaml`` is copied from a pipeline
+artifact, rendered by a ``module:function``, or exported from a ``.drawio`` file
+with the draw.io desktop CLI. The output is written to
 ``thesis_assets/figures/`` or ``thesis_assets/tables/`` and its provenance (git
 commit, input and output hashes) to ``thesis_assets/provenance.json``.
 
@@ -21,6 +22,7 @@ import csv
 import hashlib
 import importlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -33,6 +35,7 @@ import yaml
 
 from thesis_assets.types import (
     ASSET_KINDS,
+    DIAGRAM_SOURCE_DIR,
     KIND_DIRS,
     USED_IN_VALUES,
     AssetSpec,
@@ -57,7 +60,15 @@ _ASSET_KEYS: Set[str] = {
     "source",
     "notes",
 }
-_SOURCE_KEYS: Set[str] = {"copy", "render", "inputs", "producer"}
+_SOURCE_KEYS: Set[str] = {"copy", "render", "drawio", "inputs", "producer"}
+_SOURCE_MODES: Tuple[str, ...] = ("copy", "render", "drawio")
+_DRAWIO_CANDIDATES: Tuple[str, ...] = (
+    "drawio",
+    "draw.io",
+    "/Applications/draw.io.app/Contents/MacOS/draw.io",
+)
+_PNG_DPI = 300
+_SVG_DPI = 96  # draw.io and Word both treat 1 px as 1/96 in
 _NUMBER_KEYS: Set[str] = {
     "id",
     "value",
@@ -128,7 +139,7 @@ def load_manifest(path: Path) -> List[AssetSpec]:
 
     Raises:
         ValueError: If an entry is malformed, an id repeats, or the source does
-            not name exactly one of ``copy`` / ``render``.
+            not name exactly one of ``copy`` / ``render`` / ``drawio``.
     """
     specs: List[AssetSpec] = []
     seen: Set[str] = set()
@@ -150,11 +161,19 @@ def load_manifest(path: Path) -> List[AssetSpec]:
                 f"{where} ({asset_id}): 'source' must be a mapping with keys "
                 f"from {sorted(_SOURCE_KEYS)}"
             )
-        copy, render = source.get("copy"), source.get("render")
-        if (copy is None) == (render is None):
+        modes = [m for m in _SOURCE_MODES if source.get(m) is not None]
+        if len(modes) != 1:
             raise ValueError(
-                f"{where} ({asset_id}): source needs exactly one of 'copy', 'render'"
+                f"{where} ({asset_id}): source needs exactly one of {_SOURCE_MODES}"
             )
+        copy, render, drawio = (source.get(m) for m in _SOURCE_MODES)
+        if (entry["kind"] == "diagram") != (drawio is not None):
+            raise ValueError(
+                f"{where} ({asset_id}): 'drawio' is the source of every diagram "
+                f"and only of diagrams"
+            )
+        if drawio is not None and not str(drawio).endswith(".drawio"):
+            raise ValueError(f"{where} ({asset_id}): 'drawio' must be a .drawio file")
         if render is not None and (not isinstance(render, str) or ":" not in render):
             raise ValueError(
                 f"{where} ({asset_id}): 'render' must be 'module:function'"
@@ -171,6 +190,7 @@ def load_manifest(path: Path) -> List[AssetSpec]:
                 used_in=used_in,
                 copy=copy,
                 render=render,
+                drawio=drawio,
                 inputs=tuple(inputs),
                 producer=str(source.get("producer") or ""),
                 notes=str(entry.get("notes") or ""),
@@ -313,6 +333,85 @@ def _resolve_render(target: str) -> Callable[[Path], Sequence[Path]]:
     return func
 
 
+def _render_code_files(target: str, repo_root: Path) -> List[Path]:
+    """Source files of a render target that live in the repo.
+
+    The module file and, for modules under ``thesis_assets.render``, the shared
+    ``style.py``. Hashing them makes ``--check`` flag an asset as stale when its
+    drawing code changes.
+    """
+    module = importlib.import_module(target.split(":", 1)[0])
+    files: List[Path] = []
+    origin = getattr(module, "__file__", None)
+    if origin and Path(origin).resolve().is_relative_to(repo_root.resolve()):
+        files.append(Path(origin).resolve())
+    if module.__name__.startswith("thesis_assets.render."):
+        style = Path(__file__).resolve().parent / "render" / "style.py"
+        if style.resolve().is_relative_to(repo_root.resolve()) and style not in files:
+            files.append(style)
+    return files
+
+
+def find_drawio() -> str:
+    """Return the draw.io desktop CLI (``$DRAWIO_BIN`` first).
+
+    Raises:
+        FileNotFoundError: If no draw.io executable is found.
+    """
+    env = os.environ.get("DRAWIO_BIN")
+    for candidate in ([env] if env else []) + list(_DRAWIO_CANDIDATES):
+        found = shutil.which(candidate) or (
+            candidate if Path(candidate).is_file() else None
+        )
+        if found:
+            return found
+    raise FileNotFoundError(
+        "draw.io CLI not found; install draw.io desktop "
+        "(brew install --cask drawio) or set DRAWIO_BIN"
+    )
+
+
+def export_drawio(src: Path, out_stem: Path) -> List[Path]:
+    """Export a ``.drawio`` file to ``<out_stem>.svg`` and a 300-dpi PNG.
+
+    Args:
+        src: The ``.drawio`` source (first page is exported).
+        out_stem: Output path without suffix.
+
+    Returns:
+        The SVG and PNG paths.
+
+    Raises:
+        RuntimeError: If the draw.io CLI fails or writes no file.
+    """
+    exe = find_drawio()
+    jobs = [
+        (out_stem.with_suffix(".svg"), ["--embed-svg-fonts", "false"]),
+        (out_stem.with_suffix(".png"), ["--scale", str(_PNG_DPI / _SVG_DPI)]),
+    ]
+    for out, extra in jobs:
+        cmd = [
+            exe,
+            "--export",
+            "--theme",
+            "light",
+            "--border",
+            "4",
+            *extra,
+            "--output",
+            str(out),
+        ]
+        result = subprocess.run(
+            cmd + [str(src)], capture_output=True, text=True, check=False
+        )
+        if result.returncode != 0 or not out.is_file():
+            raise RuntimeError(
+                f"draw.io export of {src} to {out.suffix} failed: "
+                f"{result.stderr.strip()[-500:]}"
+            )
+    return [out for out, _ in jobs]
+
+
 def build_asset(spec: AssetSpec, assets_dir: Path, repo_root: Path) -> BuildRecord:
     """Build one asset and return its provenance record.
 
@@ -329,7 +428,7 @@ def build_asset(spec: AssetSpec, assets_dir: Path, repo_root: Path) -> BuildReco
         The build record (inputs and outputs hashed).
 
     Raises:
-        FileNotFoundError: If a copy source or an input is missing.
+        FileNotFoundError: If a copy or drawio source or an input is missing.
         ValueError: If a render function writes nothing or writes outside
             ``<kind dir>/<id>.*``.
     """
@@ -348,9 +447,19 @@ def build_asset(spec: AssetSpec, assets_dir: Path, repo_root: Path) -> BuildReco
         outputs = [dst]
         if src not in input_paths:
             input_paths.insert(0, src)
+    elif spec.drawio is not None:
+        src = repo_root / spec.drawio
+        if not src.is_file():
+            raise FileNotFoundError(f"{spec.id}: drawio source {spec.drawio} not found")
+        outputs = export_drawio(src, out_dir / spec.id)
+        if src not in input_paths:
+            input_paths.insert(0, src)
     else:
         render = _resolve_render(str(spec.render))
         outputs = [Path(p) for p in render(out_dir / spec.id)]
+        for code in _render_code_files(str(spec.render), repo_root):
+            if code not in input_paths:
+                input_paths.append(code)
         if not outputs:
             raise ValueError(f"{spec.id}: render {spec.render} wrote no files")
         for out in outputs:
@@ -482,10 +591,18 @@ def check(assets_dir: Path = ASSETS_DIR, repo_root: Path = REPO_ROOT) -> CheckRe
                 report.warnings.append(f"{spec.id}: input {inp} absent here")
             elif sha256_file(inp_path) != digest:
                 report.errors.append(f"{spec.id}: stale, input {inp} changed")
-        if spec.copy is not None and spec.copy not in record.inputs:
+        src_file = spec.copy or spec.drawio
+        if src_file is not None and src_file not in record.inputs:
             report.errors.append(f"{spec.id}: source changed in manifest, rebuild")
 
-    for kind_dir in KIND_DIRS.values():
+    drawio_sources = {s.drawio for s in specs if s.drawio}
+    diagram_dir = assets_dir / DIAGRAM_SOURCE_DIR
+    if diagram_dir.is_dir():
+        for path in sorted(diagram_dir.glob("*.drawio")):
+            if _rel(path, repo_root) not in drawio_sources:
+                report.errors.append(f"orphan diagram {_rel(path, repo_root)}")
+
+    for kind_dir in sorted(set(KIND_DIRS.values())):
         folder = assets_dir / kind_dir
         if not folder.is_dir():
             continue

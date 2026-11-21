@@ -3,11 +3,18 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
-ASSET_KINDS: Tuple[str, ...] = ("figure", "table")
-"""Allowed values of ``kind``; each kind has its own output folder."""
+ASSET_KINDS: Tuple[str, ...] = ("figure", "diagram", "table")
+"""Allowed values of ``kind``."""
 
-KIND_DIRS: Dict[str, str] = {"figure": "figures", "table": "tables"}
+KIND_DIRS: Dict[str, str] = {
+    "figure": "figures",
+    "diagram": "figures",
+    "table": "tables",
+}
 """Output folder (relative to ``thesis_assets/``) for each asset kind."""
+
+DIAGRAM_SOURCE_DIR = "diagrams"
+"""Folder (relative to ``thesis_assets/``) holding the ``.drawio`` sources."""
 
 USED_IN_VALUES: Tuple[str, ...] = ("thesis", "slides")
 """Allowed values of ``used_in``."""
@@ -19,14 +26,15 @@ class AssetSpec:
 
     Attributes:
         id: Stable slug; also the file-name stem of every output file.
-        kind: ``"figure"`` or ``"table"``.
+        kind: ``"figure"``, ``"diagram"`` or ``"table"``.
         chapter: Section where the asset currently appears (e.g. ``"6.2"``).
         caption: Caption exactly as in the thesis (Greek).
         used_in: Deliverables that use the asset (``thesis``, ``slides``).
-        copy: Repo-relative file to copy as-is (mutually exclusive with
-            ``render``).
-        render: ``"module:function"`` that writes the asset (mutually exclusive
-            with ``copy``).
+        copy: Repo-relative file to copy as-is.
+        render: ``"module:function"`` that writes the asset.
+        drawio: Repo-relative ``.drawio`` file exported with the draw.io CLI
+            (``kind: diagram`` only). Exactly one of ``copy``, ``render`` and
+            ``drawio`` is set.
         inputs: Repo-relative files the asset is computed from; their hashes are
             recorded so ``--check`` can tell when the asset is stale.
         producer: Command that produced the inputs (for the reader of the
@@ -41,6 +49,7 @@ class AssetSpec:
     used_in: Tuple[str, ...]
     copy: Optional[str] = None
     render: Optional[str] = None
+    drawio: Optional[str] = None
     inputs: Tuple[str, ...] = ()
     producer: str = ""
     notes: str = ""

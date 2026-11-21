@@ -10,7 +10,7 @@ Keep it current: add a row whenever AI produces or changes something that ends u
 |---|---|---|---|
 | Cursor (agent: Composer) | Composer (exact model not recorded) | Code: executing the phases of the implementation plans | 2026-10-21 – 2026-10-23 |
 | Claude Code | Claude Opus (version not recorded); Claude Sonnet 5.5 (one commit) | Code: phase reviews and review fixes | 2026-10-21 – 2026-10-23 |
-| Claude Code | Claude Opus 5.5 | Infrastructure for frozen thesis assets and this log | 2026-11-21 – |
+| Claude Code | Claude Opus 5.5 | Infrastructure for frozen thesis assets, the `thesis-asset` skill, this log; thesis figures | 2026-11-21 – |
 | Claude Code (`section-guide` skill) | Claude (version not recorded) | Thesis text: section plans and reviews of the user's drafts (does not write the text) | 2026-11-17 – |
 | _TODO_ | | | |
 
@@ -41,7 +41,9 @@ These are the rules that applied to AI output. They are enforced through `CLAUDE
 | 2026-10-22 | `.cursor/plans/fairness-audit.md` (implementation plan) | _TODO_ | _TODO_ | _TODO_ | _TODO_ | `a9eac5a`, `51e7a26` |
 | 2026-10-22 – 23 | `src/fairness/` (baseline fairness audit), its tests, `configs/fairness.yaml`, `docs/fairness_audit.md`: plan phases 0–9 | Cursor Composer | generated | wrote the plan, ran each phase, accepted it after review | substantial | Commits `fairness: phase N` with the trailer `Co-authored-by: Cursor` |
 | 2026-10-22 – 23 | `src/fairness/`: review of each phase and fixes to its findings | Claude Code (Opus); Claude Sonnet 5.5 for `725fd17` | reviewed, fixed | decided on the verdicts | substantial | Plan progress log ("fixed by the reviewer"); `725fd17` (trailer `Claude Sonnet 5.5`); commits between phases |
-| 2026-11-21 | `thesis_assets/` (build/check script, manifest, numbers register, README), `tests/test_thesis_assets_build.py`, `docs/ai-use.md`, `.gitignore`, `CLAUDE.md` | Claude Code (Opus 5.5) | generated | asked for and specified the structure; reviews it | all | This session |
+| 2026-11-21 | `thesis_assets/` (build/check script incl. draw.io export, manifest, numbers register, `render/style.py`, README), `tests/test_thesis_assets_build.py`, `.claude/skills/thesis-asset/`, `docs/ai-use.md`, `.gitignore`, `CLAUDE.md` | Claude Code (Opus 5.5) | generated | asked for and specified the structure and the skill's interface; reviews it | all | This session |
+| 2026-11-21 | `thesis_assets/render/ch2.py:roc_illustration` (illustrative ROC curve) | Claude Code (Opus 5.5), `thesis-asset` | generated | specified the content, labels and style in detail | substantial | Manifest `roc-illustration` |
+| 2026-11-21 | `thesis_assets/diagrams/score-decision-outcome.drawio` (score → decision → outcome diagram) | Claude Code (Opus 5.5), `thesis-asset` | generated | specified every node, label, line style and the layout | substantial | Manifest `score-decision-outcome` |
 
 ### 3.2 Thesis text (vault `text/`)
 
@@ -49,6 +51,8 @@ These are the rules that applied to AI output. They are enforced through `CLAUDE
 |---|---|---|---|---|---|---|
 | 2026-11-17 | Ch. 2 (plan for the whole chapter) | Claude Code, `section-guide` | planned | will write the text | none in the text so far | `text/guides/2-credit-scoring-and-ml.md` |
 | _TODO_ | `3-fairness-in-ML.docx` | _TODO_ | _TODO_ | _TODO_ | _TODO_ | **Author to fill in.** |
+| 2026-11-21 | Ch. 2: captions of figures `score-decision-outcome` (2.1) and `roc-illustration` (2.3), proposed in `thesis_assets/manifest.yaml` | Claude Code (Opus 5.5), `thesis-asset` | generated | to review and adopt or rewrite | caption text only | Manifest |
+| 2026-11-21 | Vault `text/glossary.md` (created; 14 term pairs from the two Ch. 2 figures) | Claude Code (Opus 5.5), `thesis-asset` | co-written | chose the Greek terms in the figure specs | minor | `text/glossary.md` |
 
 ### 3.3 Presentation
 
