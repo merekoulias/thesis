@@ -1,0 +1,31 @@
+.cursor/rules/thesis-writing.mdc
+  s_949e6a8e77e66e::t_5c259e5fe65897 1-77
+CLAUDE.md
+  s_0b8cb123e301a8::t_eba3258550289b 38-41,60,67,73-80,89-90
+docs/ai-use.md
+  s_0b8cb123e301a8::t_81882d520b75b2 1-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "81763b6e86873ddaa058ff3807304716dac30828",
+  "prompts": {},
+  "sessions": {
+    "s_0b8cb123e301a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fb27b3b6-2af6-44e8-9ab0-0a25c7a8c184",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    },
+    "s_949e6a8e77e66e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b647df7-8ad2-4bee-a0ac-c6aff53f6e08",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
