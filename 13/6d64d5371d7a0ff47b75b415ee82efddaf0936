@@ -1,0 +1,41 @@
+docs/ai-use.md
+  s_0b8cb123e301a8::t_28e7640f6f53d6 13,44-46,54-55
+tests/test_thesis_assets_build.py
+  s_0b8cb123e301a8::t_330a3419f7eb00 92,114,131-133,142-186,240-251
+thesis_assets/README.md
+  s_0b8cb123e301a8::t_f248fbe896e1f3 3-5,12,17-20,31-32,34,39-49,51-62
+thesis_assets/build.py
+  s_0b8cb123e301a8::t_04539f5cac2c71 3-5,25,38,63-71,142,164-170,172-173,175-176,193,336-414,431,450-456,460-462,594-595,598-605
+thesis_assets/diagrams/score-decision-outcome.drawio
+  s_0b8cb123e301a8::t_e44c13794bb086 1-59
+thesis_assets/figures/roc-illustration.svg
+  s_0b8cb123e301a8::t_a5c45a71fe3950 1-3848
+thesis_assets/figures/score-decision-outcome.svg
+  s_0b8cb123e301a8::t_7021837bbb741a 1-3
+thesis_assets/manifest.yaml
+  s_0b8cb123e301a8::t_3db2d5b55687e4 8,10,15,20-50
+thesis_assets/provenance.json
+  s_0b8cb123e301a8::t_d6d6ff0d4b6a54 1-27
+thesis_assets/render/ch2.py
+  s_0b8cb123e301a8::t_654592b91a2802 1-96
+thesis_assets/render/style.py
+  s_0b8cb123e301a8::t_5abd4de8b16305 1-175
+thesis_assets/types.py
+  s_0b8cb123e301a8::t_93002e2e35b2e1 6-7,9-13,16-18,29,33-37,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "136d64d5371d7a0ff47b75b415ee82efddaf0936",
+  "prompts": {},
+  "sessions": {
+    "s_0b8cb123e301a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fb27b3b6-2af6-44e8-9ab0-0a25c7a8c184",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
