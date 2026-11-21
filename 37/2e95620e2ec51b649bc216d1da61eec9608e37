@@ -1,0 +1,31 @@
+.claude/skills/thesis-asset/SKILL.md
+  s_0b8cb123e301a8::t_76b20435a460ce 1-127
+.claude/skills/thesis-asset/kinds/diagram.md
+  s_0b8cb123e301a8::t_b04a65a603e946 1-37
+.claude/skills/thesis-asset/kinds/plot.md
+  s_0b8cb123e301a8::t_ca39f72ed51902 1-45
+.claude/skills/thesis-asset/kinds/table.md
+  s_0b8cb123e301a8::t_61077a56df02a1 1-22
+.claude/skills/thesis-asset/learnings.md
+  s_0b8cb123e301a8::t_89714d94cb4731 1-21
+.claude/skills/thesis-asset/style.md
+  s_0b8cb123e301a8::t_7ea656f593468d 1-38
+CLAUDE.md
+  s_0b8cb123e301a8::t_6eda61af2139e9 60,79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "372e95620e2ec51b649bc216d1da61eec9608e37",
+  "prompts": {},
+  "sessions": {
+    "s_0b8cb123e301a8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fb27b3b6-2af6-44e8-9ab0-0a25c7a8c184",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
