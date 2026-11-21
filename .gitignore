@@ -14,3 +14,7 @@ __pycache__/
 docs/decisions.md
 docs/experiments.md
 docs/open-questions.md
+
+# frozen thesis tables and figures are tracked (see thesis_assets/README.md)
+!thesis_assets/**/*.png
+!thesis_assets/**/*.csv

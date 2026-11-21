@@ -1,0 +1,19 @@
+# Every table and figure that appears in the thesis or the presentation.
+# Conventions and field reference: thesis_assets/README.md.
+# After editing, run: python -m thesis_assets.build --only <id>
+#
+# Example entry (copy, then edit):
+#
+#   - id: primary-gaps-baseline          # stable slug = file-name stem; never a number
+#     kind: figure                       # figure | table
+#     chapter: "6.2"                     # where it appears now; update when it moves
+#     caption: "Σχήμα: Κύριες διαφορές ..."  # caption exactly as in the thesis
+#     used_in: [thesis, slides]          # thesis | slides
+#     source:
+#       copy: artifacts/fairness/summary_baseline/figures/primary_gaps.png
+#       # or: render: thesis_assets.render.ch6:primary_gaps_baseline
+#       inputs: []                       # extra files the asset is computed from
+#       producer: "python -m src.fairness.summary"
+#     notes: ""
+
+assets: []

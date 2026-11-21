@@ -1,0 +1,27 @@
+# Key numbers quoted in the thesis text or the slides, tied to the artifact they
+# come from. `python -m thesis_assets.build --check` re-reads each source and
+# fails when the rounded value no longer matches the text.
+# Conventions: thesis_assets/README.md.
+#
+# Example entries (copy, then edit):
+#
+#   - id: lgbm-oof-auc
+#     value: 0.786                       # exactly as written in the text
+#     decimals: 3
+#     chapter: "6.1"
+#     used_in: [thesis]
+#     source:
+#       path: artifacts/runs/lgbm/baseline/metrics.json
+#       key: oof_roc_auc                 # JSON: dotted key
+#
+#   - id: lgbm-tpr-at-threshold
+#     value: 0.325
+#     decimals: 3
+#     chapter: "6.1"
+#     used_in: [thesis, slides]
+#     source:
+#       path: artifacts/fairness/summary_baseline/utility.csv
+#       where: {model: lgbm}             # CSV: filter selecting exactly one row
+#       column: tpr
+
+numbers: []
