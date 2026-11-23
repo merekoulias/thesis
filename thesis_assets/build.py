@@ -78,7 +78,14 @@ _NUMBER_KEYS: Set[str] = {
     "source",
     "notes",
 }
-_NUMBER_SOURCE_KEYS: Set[str] = {"path", "key", "where", "column"}
+_NUMBER_SOURCE_KEYS: Set[str] = {
+    "path",
+    "key",
+    "where",
+    "column",
+    "complement",
+    "percent",
+}
 
 
 # --------------------------------------------------------------------------- #
@@ -242,6 +249,9 @@ def load_numbers(path: Path) -> List[NumberSpec]:
                 f"{where} ({num_id}): source must be a .json with 'key' or a .csv "
                 f"with 'where' and 'column'"
             )
+        for flag in ("complement", "percent"):
+            if not isinstance(source.get(flag, False), bool):
+                raise ValueError(f"{where} ({num_id}): '{flag}' must be true or false")
         specs.append(
             NumberSpec(
                 id=num_id,
@@ -253,6 +263,8 @@ def load_numbers(path: Path) -> List[NumberSpec]:
                 key=source.get("key"),
                 where={str(k): str(v) for k, v in (source.get("where") or {}).items()},
                 column=source.get("column"),
+                complement=bool(source.get("complement", False)),
+                percent=bool(source.get("percent", False)),
                 notes=str(entry.get("notes") or ""),
             )
         )
@@ -526,6 +538,9 @@ def build(
 def read_source_number(spec: NumberSpec, repo_root: Path) -> float:
     """Read the current value of a registered number from its source file.
 
+    The ``complement`` and ``percent`` flags of ``spec`` are applied to the raw
+    value, so the result is comparable with the number as written in the text.
+
     Raises:
         FileNotFoundError: If the source file does not exist.
         KeyError: If the JSON key or the CSV row/column cannot be found, or the
@@ -538,7 +553,7 @@ def read_source_number(spec: NumberSpec, repo_root: Path) -> float:
         node: Any = json.loads(path.read_text(encoding="utf-8"))
         for part in spec.key.split("."):
             node = node[int(part)] if isinstance(node, list) else node[part]
-        return float(node)
+        return _transform(spec, float(node))
     with path.open(newline="", encoding="utf-8") as handle:
         rows = [
             r
@@ -549,7 +564,13 @@ def read_source_number(spec: NumberSpec, repo_root: Path) -> float:
         raise KeyError(f"{spec.path}: filter {spec.where} matches {len(rows)} rows")
     if spec.column not in rows[0]:
         raise KeyError(f"{spec.path}: no column {spec.column!r}")
-    return float(rows[0][str(spec.column)])
+    return _transform(spec, float(rows[0][str(spec.column)]))
+
+
+def _transform(spec: NumberSpec, raw: float) -> float:
+    """Apply the optional ``complement`` (1 - x) and ``percent`` (x 100) flags."""
+    value = 1.0 - raw if spec.complement else raw
+    return 100.0 * value if spec.percent else value
 
 
 def check(assets_dir: Path = ASSETS_DIR, repo_root: Path = REPO_ROOT) -> CheckReport:

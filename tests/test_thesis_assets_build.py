@@ -228,6 +228,24 @@ def test_numbers_match_and_mismatch(tmp_path: Path) -> None:
     assert "matches 2 rows" in errors[1]
 
 
+def test_number_complement_and_percent(tmp_path: Path) -> None:
+    tpr = {"path": "artifacts/utility.csv", "where": {"model": "lgbm"}, "column": "tpr"}
+    numbers = [
+        _number(id="pct", value=32.51, decimals=2, source={**tpr, "percent": True}),
+        _number(id="comp", value=0.675, source={**tpr, "complement": True}),
+        _number(
+            id="both",
+            value=67.49,
+            decimals=2,
+            source={**tpr, "complement": True, "percent": True},
+        ),
+        _number(id="wrong-pct", value=0.33, decimals=2, source={**tpr, "percent": True}),
+    ]
+    repo = _setup(tmp_path, [], numbers)
+    errors = _check(repo).errors
+    assert errors == ["number wrong-pct: text says 0.33, source now gives 32.51"]
+
+
 def test_number_validation(tmp_path: Path) -> None:
     repo = _setup(tmp_path, [], [_number(source={"path": "artifacts/utility.csv"})])
     with pytest.raises(ValueError, match="csv"):

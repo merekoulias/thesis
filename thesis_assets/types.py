@@ -69,6 +69,10 @@ class NumberSpec:
         key: For JSON: dotted key (list indices allowed, e.g. ``folds.0.auc``).
         where: For CSV: column → value filter that selects exactly one row.
         column: For CSV: column holding the number.
+        complement: Compare against ``1 - source`` (e.g. a share of non-defaulters
+            read from a base rate).
+        percent: Compare against ``100 * source`` (applied after ``complement``),
+            for numbers the text writes as percentages.
         notes: Free text.
     """
 
@@ -81,6 +85,8 @@ class NumberSpec:
     key: Optional[str] = None
     where: Dict[str, str] = field(default_factory=dict)
     column: Optional[str] = None
+    complement: bool = False
+    percent: bool = False
     notes: str = ""
 
 

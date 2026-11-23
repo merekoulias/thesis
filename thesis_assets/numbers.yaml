@@ -23,5 +23,58 @@
 #       path: artifacts/fairness/summary_baseline/utility.csv
 #       where: {model: lgbm}             # CSV: filter selecting exactly one row
 #       column: tpr
+#
+# Optional source flags: `percent: true` (×100, for numbers written as %) and
+# `complement: true` (1 − x, applied first).
 
-numbers: []
+numbers:
+  # Ch. 2 ¶12: the approve-everyone example. The ALL row of group_counts.csv
+  # depends only on the labels, so it is the same in every model's audit folder.
+  - id: base-rate-pct
+    value: 8.07                       # text: 8,07%
+    decimals: 2
+    chapter: "2.3"
+    used_in: [thesis]
+    source:
+      path: artifacts/fairness/logreg/baseline/group_counts.csv
+      where: {grouping: ALL, group: all}
+      column: base_rate
+      percent: true
+    notes: Ch. 2 ¶12; also the share flagged by the threshold rule (5.6).
+
+  - id: n-positives
+    value: 24825                      # text: 24.825
+    decimals: 0
+    chapter: "2.3"
+    used_in: [thesis]
+    source:
+      path: artifacts/fairness/logreg/baseline/group_counts.csv
+      where: {grouping: ALL, group: all}
+      column: positives
+    notes: Ch. 2 ¶12, numerator of the base rate.
+
+  - id: n-applications
+    value: 307507                     # text: 307.507
+    decimals: 0
+    chapter: "2.3"
+    used_in: [thesis]
+    source:
+      path: artifacts/fairness/logreg/baseline/group_counts.csv
+      where: {grouping: ALL, group: all}
+      column: n
+    notes: Ch. 2 ¶12, analysis sample after dropping the 4 XNA rows (5.1).
+
+  - id: no-default-share-pct
+    value: 91.93                      # text: 91,93%
+    decimals: 2
+    chapter: "2.3"
+    used_in: [thesis]
+    source:
+      path: artifacts/fairness/logreg/baseline/group_counts.csv
+      where: {grouping: ALL, group: all}
+      column: base_rate
+      complement: true
+      percent: true
+    notes: >-
+      Ch. 2 ¶12: share of applicants without payment difficulties, i.e. how often
+      an approve-everyone rule is right (1 − base rate).
