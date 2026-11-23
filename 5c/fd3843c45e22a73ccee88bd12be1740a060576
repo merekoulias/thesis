@@ -1,0 +1,19 @@
+CLAUDE.md
+  s_356aed6b93700a::t_6c84d7fa7fb550 75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5cfd3843c45e22a73ccee88bd12be1740a060576",
+  "prompts": {},
+  "sessions": {
+    "s_356aed6b93700a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d8dac417-9708-4011-813b-3774463ab3e6",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
