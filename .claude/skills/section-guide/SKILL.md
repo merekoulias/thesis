@@ -16,6 +16,8 @@ argument-hint: "<section, e.g. 5.1 or 'Ch. 6'> | review <section> [¶n]"
 
 The user writes the section; you plan it. **Do not write the thesis prose.** Give the plan, the evidence and guiding questions with clues so the user can write the Greek text themselves. Write everything in **English**.
 
+Workflow per paragraph: guide → the user writes → `annotate-paragraph` (citations and English terms, as tracked changes) → paragraph review. Section review comes once all paragraphs are done.
+
 Two modes:
 
 - `/section-guide <section>`: **guide mode**. Produce a writing guide for one section (e.g. `5.7`, `6`, `3.2 separation`).
@@ -108,6 +110,7 @@ The user has not read every source in the bibliography and may not remember rece
 ## Step 3: save and reply (guide mode)
 
 - Save the guide to `text/guides/<section>-<slug>.md` in the vault (e.g. `text/guides/5.7-fairness-metrics.md`). If a guide for that section exists, update it and say what changed.
+- **Updating an existing guide:** the vault has no version history, so first copy the old guide to `text/guides/archive/<file>-<date>.md`. Paragraphs the user has already written keep their plan and status and get no questions, unless the user asks. Carry over still-valid decisions recorded in the old guide (e.g. points dropped for lack of a source).
 - In the reply: the link, the section's point in one sentence, the paragraph count, the open items, and anything the user must decide.
 
 ## Review mode
@@ -118,11 +121,17 @@ Two scopes. A section is reviewed only after a **section review**, even if every
 
 1. **Get the text.** Use the paragraph the user pasted; otherwise find it in the chapter `.docx` in `text/` (via pandoc). Read its plan and questions in the guide, and the paragraphs before and after it.
 2. **Question coverage.** Match each sentence to the question it answers. Report it as a table: `Q# | answered? | the sentence (quoted, shortened)`. Then list unanswered questions, answers out of order, and sentences that answer no question (additions: check that a collected source supports them).
-3. **Content against the sources.** For each claim, open the source at the clue's location and check that the claim says what the source says: scope (*can* vs *does*), dates, numbers (exact match with Evidence), and English phrases whose meaning shifted in translation.
-4. **Writing rules.** Check against `thesis-writing.mdc`: `[Full Title]` citations placed right after the claim they support and present in the bibliography; notation; glossary terms; figure/table references; no repetition of earlier paragraphs; the handover to the next paragraph. Also check the Greek for grammar (article and case agreement) and register.
-5. **Report** in English, findings most important first, each as: quoted problem → what is wrong → what to change. Do not rewrite the paragraph. If the user asks to "add citations" or "fix", return their text unchanged with `[Full Title]` citations inserted and `[TODO]` where no collected source supports a claim. For a claim with no collected source, set out both options (narrow it, or add a named source) and let the user choose.
-6. **Differences from the guide.** Note where the text **deliberately differs** (a different order, a dropped question, an added source) and ask about any difference whose reason isn't obvious. These differences are the main input for learning.
-7. **Bookkeeping.** In the guide, add `- **Status:** reviewed <date>` under the paragraph's heading. If the section status says `reviewed`, change it to `outdated (¶<n> reviewed again <date>)`. Under **Section notes** in `learnings.md`, record what the paragraph now says that later paragraphs must not repeat.
+3. **Content against the sources.** For each claim, open the source at the clue's location and check that the claim says what the source says: scope (*can* vs *does*), dates, numbers (exact match with Evidence), and English phrases whose meaning shifted in translation. Flag any sentence that is a near-translation of a source sentence without quotation marks; a direct quote needs quotation marks and `[Full Title, p. <n>]`.
+4. **Paragraph shape.** It does the one job in its **Purpose**; the first sentence says what the paragraph is about; the sentences connect into an argument rather than reading as a list of answers; it fits its line budget.
+5. **Writing rules.** Check against `thesis-writing.mdc`:
+   - Citations (inserted by `annotate-paragraph`, which runs before review): `[Full Title]` right after the claim it supports, in the bibliography. If they are missing, point the user to `annotate-paragraph` instead of adding them.
+   - Terms: at first use in the chapter, the Greek term with the English in parentheses, and acronyms spelled out (rule 7); the same Greek term as earlier paragraphs and the glossary.
+   - Notation; figure/table references; no repetition of earlier paragraphs; the handover to the next paragraph.
+   - Ch. 5–9: every key number is registered in `thesis_assets/numbers.yaml`; results stay apart from interpretation (rule 9); nothing pre-empts the mitigation chapters (rule 11).
+   - The Greek: grammar (article and case agreement) and register.
+6. **Report** in English, findings most important first, each as: quoted problem → what is wrong → what to change. Do not rewrite the paragraph. For a claim with no collected source, set out both options (narrow it, or add a named source) and let the user choose.
+7. **Differences from the guide.** Note where the text **deliberately differs** (a different order, a dropped question, an added source) and ask about any difference whose reason isn't obvious. These differences are the main input for learning.
+8. **Bookkeeping.** In the guide, add `- **Status:** reviewed <date>` under the paragraph's heading. If the section status says `reviewed`, change it to `outdated (¶<n> reviewed again <date>)`. Under **Section notes** in `learnings.md`, record what the paragraph now says that later paragraphs must not repeat.
 
 ### Section review: `review <section>`
 
@@ -135,7 +144,7 @@ Two scopes. A section is reviewed only after a **section review**, even if every
    - One Greek term and one notation per concept across all paragraphs.
    - Every figure and table is captioned, referenced, and introduced before or where it is discussed.
    - The section serves its RQ, and its length fits the budget.
-4. **Report and differences** as in paragraph review steps 5–6.
+4. **Report and differences** as in paragraph review steps 6–7.
 5. **Bookkeeping.** Set the guide's `**Section status:**` to `reviewed <date>`.
 
 ## Step 4: learn (all modes, every time)

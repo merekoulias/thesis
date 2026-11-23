@@ -18,6 +18,7 @@ The thesis is written in **Greek**. These rules are in English, like the rest of
 - Cite every source **by its full title in square brackets**, not by number or author–year: `[Equality of Opportunity in Supervised Learning]`.
 - Take the title **exactly** from the source's note in the vault (`bibliography/papers-notes/`, `books-notes/`, `article-notes/`, `directive-notes/`). For papers, use the `title` field in the note's frontmatter. For a source without a `title` field, use its official title. Keep the title in its original language (do not translate it into Greek), with the same spelling and punctuation every time, so the titles can later be replaced mechanically.
 - Several sources: `[Title A], [Title B]`.
+- Direct quotes (in quotation marks) add the printed page: `[Title, p. 12]`.
 - **Do not replace titles with numbers** until the user says the thesis is finished. Then switch to IEEE numbering in order of first citation, and build the bibliography from the same titles.
 - Cite only sources that are in the vault's `bibliography/`. If a claim needs a source that isn't there, write `[TODO: source for <claim>]` and tell the user. Never invent a reference.
 - Every source in the bibliography must be cited in the text (department rule).

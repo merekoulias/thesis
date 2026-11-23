@@ -72,7 +72,7 @@ Cursor rules in `.cursor/rules/` (`thesis-context.mdc`, `python-src.mdc`, `pytho
 
 ## Writing the thesis text
 
-Before drafting, editing or reviewing any thesis chapter, read and follow `.cursor/rules/thesis-writing.mdc`. In particular, cite sources by their full title in square brackets (`[Title]`) until the user says the thesis is finished. For sections the user writes themselves, guide rather than write: use the `section-guide` skill (`.claude/skills/section-guide/`), which plans the section with guiding questions and clues for each paragraph and reviews the user's draft, and records what it learns in its `learnings.md`.
+Before drafting, editing or reviewing any thesis chapter, read and follow `.cursor/rules/thesis-writing.mdc`. In particular, cite sources by their full title in square brackets (`[Title]`) until the user says the thesis is finished. For sections the user writes themselves, guide rather than write: use the `section-guide` skill (`.claude/skills/section-guide/`), which plans the section with guiding questions and clues for each paragraph and reviews the user's draft, and records what it learns in its `learnings.md`. After the user writes a paragraph and before its review, the `annotate-paragraph` skill (`.claude/skills/annotate-paragraph/`) inserts citations and English terms into the `.docx` as tracked changes and adds new terms to the glossary.
 
 ## Deliverable bookkeeping
 

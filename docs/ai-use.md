@@ -21,7 +21,7 @@ These are the rules that applied to AI output. They are enforced through `CLAUDE
 - The author sets every methodological decision (`docs/decisions.md`). AI does not record decisions the author has not stated.
 - AI never invents references. The text cites only sources in the vault's `bibliography/`, and anything missing becomes a `[TODO: source]`.
 - Every number in the text comes from `artifacts/`, the notebooks or the writing notes, never from a model's memory (`.cursor/rules/thesis-writing.mdc`). Key numbers are registered in `thesis_assets/numbers.yaml`.
-- Sections the author writes are guided, not written, by AI (`section-guide` skill).
+- Sections the author writes are guided, not written, by AI (`section-guide` skill). AI may insert citations and English terms into them only as tracked changes, which the author accepts or rejects (`annotate-paragraph` skill).
 - Code produced by AI passes the repo's tests and a separate review before it is accepted. The author reviews all of it and is responsible for all of it.
 
 ## 3. Log
@@ -44,7 +44,7 @@ These are the rules that applied to AI output. They are enforced through `CLAUDE
 | 2026-11-21 | `thesis_assets/` (build/check script incl. draw.io export, manifest, numbers register, `render/style.py`, README), `tests/test_thesis_assets_build.py`, `.claude/skills/thesis-asset/`, `docs/ai-use.md`, `.gitignore`, `CLAUDE.md` | Claude Code (Opus 5.5) | generated | asked for and specified the structure and the skill's interface; reviews it | all | This session |
 | 2026-11-21 | `thesis_assets/render/ch2.py:roc_illustration` (illustrative ROC curve) | Claude Code (Opus 5.5), `thesis-asset` | generated | specified the content, labels and style in detail | substantial | Manifest `roc-illustration` |
 | 2026-11-21 | `thesis_assets/diagrams/score-decision-outcome.drawio` (score → decision → outcome diagram) | Claude Code (Opus 5.5), `thesis-asset` | generated | specified every node, label, line style and the layout | substantial | Manifest `score-decision-outcome` |
-| 2026-11-23 | `.claude/skills/section-guide/` (`SKILL.md` template: guiding questions with clues per paragraph, sourcing limited to the collected bibliography; paragraph and section review; `learnings.md`), `CLAUDE.md` | Claude Code (Opus 5.5) | edited | designed the question-and-clue pattern and its rules; reviews the skill | substantial | This session |
+| 2026-11-23 | `.claude/skills/section-guide/` (`SKILL.md` template: guiding questions with clues per paragraph, sourcing limited to the collected bibliography; paragraph and section review with extra paragraph checks; `learnings.md`), new `.claude/skills/annotate-paragraph/` (citations and English terms as tracked changes), `.cursor/rules/thesis-writing.mdc` rule 1 (page for direct quotes), vault `text/writing-guide.md` (notation X, A, G), `CLAUDE.md` | Claude Code (Opus 5.5) | edited | designed the question-and-clue pattern and its rules; reviews the skill | substantial | This session |
 
 ### 3.2 Thesis text (vault `text/`)
 
