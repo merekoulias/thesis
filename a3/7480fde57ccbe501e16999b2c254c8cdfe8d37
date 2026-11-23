@@ -1,0 +1,31 @@
+.claude/skills/section-guide/learnings.md
+  s_41c86951bcece5::t_f92f0522851834 10,17-18,25,44-45,51
+docs/ai-use.md
+  s_41c86951bcece5::t_35aaf3e1ec2a4f 48,60-61
+tests/test_thesis_assets_build.py
+  s_41c86951bcece5::t_31d8ef306dd688 231-248
+thesis_assets/README.md
+  s_41c86951bcece5::t_764d32c8d357b8 66
+thesis_assets/build.py
+  s_41c86951bcece5::t_d5473ddf5c6f6e 81-88,252-254,266-267,541-543,556,567-573
+thesis_assets/numbers.yaml
+  s_41c86951bcece5::t_07300d65230e79 26-65,67-80
+thesis_assets/types.py
+  s_41c86951bcece5::t_82312aa2767a92 72-75,88-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a37480fde57ccbe501e16999b2c254c8cdfe8d37",
+  "prompts": {},
+  "sessions": {
+    "s_41c86951bcece5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f5fe65e-1fc1-474e-b78e-f2c76249ab8d",
+        "model": "unknown"
+      },
+      "human_author": "merekoulias <cmerekoulias@gmail.com>"
+    }
+  }
+}
